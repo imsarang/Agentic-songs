@@ -53,6 +53,11 @@ func Orchestrate(ctx context.Context, bus *Bus) {
 			case EventBrowserCrashed:
 				loginInFlight = false
 				reply = nil
+
+			case EventTokenExpired:
+				phase = PhaseExpired
+				loginInFlight = false
+				reply = nil
 				enqueue()
 			}
 			log.Printf("session event=%s phase=%s", event.Type, phase)

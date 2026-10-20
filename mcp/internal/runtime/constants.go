@@ -40,7 +40,8 @@ const (
 	EventLoggedIn       Event = "loggedIn"
 	EventChallenge      Event = "challenge"
 	EventExpired        Event = "expired"
-	EventBrowserCrashed Event = "browserCrashed"
+	EventBrowserCrashed Event = "browserCrashed" // unused; kept so old logs stay readable
+	EventTokenExpired   Event = "tokenExpired"
 )
 
 // Args are the fields later tools fill in. ensureSession leaves them empty.
@@ -52,7 +53,7 @@ type Args struct {
 	Title        string
 	Artist       string
 	ResultIndex  int
-	TrackID      string
+	SearchID     int
 	UseCurrent   bool
 }
 

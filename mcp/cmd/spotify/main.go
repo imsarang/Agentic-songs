@@ -4,9 +4,13 @@ import (
 	"context"
 	"log"
 	"os"
-	"shanks/internal/browser"
+
+	"shanks/internal/actor"
+	"shanks/internal/auth"
 	"shanks/internal/config"
+	"shanks/internal/mcp"
 	"shanks/internal/runtime"
+	"shanks/internal/spotify"
 )
 
 func main() {
@@ -15,13 +19,16 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
 func run() error {
 	cfg, err := config.Load()
-
 	if err != nil {
 		return err
 	}
-	log.Printf("account=%s profile=%s headless=%t", config.RedactedEmail(cfg.GoogleEmail), cfg.ProfileDir, cfg.Headless)
+	log.Printf("spotify api client_id=%s data=%s", config.RedactedClientID(cfg.ClientID), cfg.DataDir)
+
+	tokens := auth.NewSource(auth.Path(cfg.DataDir), cfg.ClientID, cfg.ClientSecret, cfg.RedirectURI)
+	client := spotify.NewHTTPClient(tokens)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -30,7 +37,11 @@ func run() error {
 	supervisorStopped := make(chan struct{})
 
 	go runtime.Signals(cancel)
-	go browser.Run(cfg, bus)
+	go actor.Run(cfg, bus, client)
+	go func() {
+		mcp.Serve(bus)
+		cancel()
+	}()
 	go func() {
 		defer close(supervisorStopped)
 		runtime.Orchestrate(ctx, bus)

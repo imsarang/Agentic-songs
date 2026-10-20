@@ -1,3 +1,4 @@
 mcp/.env
+mcp/bin/
 mcp/data/chrome-profile
 mcp/data/spotify-auth.json

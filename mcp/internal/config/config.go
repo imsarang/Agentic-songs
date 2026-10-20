@@ -3,23 +3,22 @@ package config
 import (
 	"bufio"
 	"os"
-	"strconv"
 	"strings"
 )
 
 const (
-	defaultProfileDir = "mcp/data/chrome-profile"
-	envEmail          = "SPOTIFY_GOOGLE_EMAIL"
-	envPassword       = "SPOTIFY_GOOGLE_PASSWORD"
-	envProfile        = "SPOTIFY_PROFILE_DIR"
-	envHeadless       = "SPOTIFY_HEADLESS"
+	defaultDataDir = "mcp/data"
+	envClientID    = "SPOTIFY_CLIENT_ID"
+	envSecret      = "SPOTIFY_CLIENT_SECRET"
+	envRedirect    = "SPOTIFY_REDIRECT_URI"
+	envDataDir     = "SPOTIFY_DATA_DIR"
 )
 
 type Config struct {
-	GoogleEmail    string
-	GooglePassword string
-	ProfileDir     string
-	Headless       bool
+	ClientID     string
+	ClientSecret string
+	RedirectURI  string
+	DataDir      string
 }
 
 func Load() (Config, error) {
@@ -27,32 +26,30 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	profile := pick(file, envProfile)
-	if profile == "" {
-		profile = defaultProfileDir
+	dataDir := pick(file, envDataDir)
+	if dataDir == "" {
+		dataDir = defaultDataDir
 	}
-	headless, err := parseHeadless(pick(file, envHeadless))
-	if err != nil {
-		return Config{}, err
+	redirect := pick(file, envRedirect)
+	if redirect == "" {
+		redirect = "http://127.0.0.1:4381/callback"
 	}
 	return Config{
-		GoogleEmail:    pick(file, envEmail),
-		GooglePassword: pick(file, envPassword),
-		ProfileDir:     profile,
-		Headless:       headless,
+		ClientID:     pick(file, envClientID),
+		ClientSecret: pick(file, envSecret),
+		RedirectURI:  redirect,
+		DataDir:      dataDir,
 	}, nil
 }
 
-func RedactedEmail(email string) string {
-	if email == "" {
+func RedactedClientID(id string) string {
+	if id == "" {
 		return "missing"
 	}
-
-	at := strings.LastIndex(email, "@")
-	if at <= 1 {
+	if len(id) <= 4 {
 		return "set"
 	}
-	return email[:1] + "***" + email[at:]
+	return id[:2] + "***" + id[len(id)-2:]
 }
 
 func pick(file map[string]string, key string) string {
@@ -60,13 +57,6 @@ func pick(file map[string]string, key string) string {
 		return value
 	}
 	return file[key]
-}
-
-func parseHeadless(value string) (bool, error) {
-	if value == "" {
-		return false, nil
-	}
-	return strconv.ParseBool(value)
 }
 
 func loadEnvFile() (map[string]string, error) {
