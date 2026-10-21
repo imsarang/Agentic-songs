@@ -34,4 +34,17 @@ func Register(s *server.MCPServer, bus *runtime.Bus) {
 	s.AddTool(mcp.NewTool("spotify_now_playing",
 		mcp.WithDescription("Read the player bar. Returns nothing_playing when the bar is empty."),
 	), nowPlayingHandler(bus))
+
+	s.AddTool(mcp.NewTool("spotify_playlist",
+		mcp.WithDescription("List/create/add/play/update a playlist. action=list|create|add|play|update."),
+		mcp.WithString("action", mcp.Description("list, create, add, play, or update (default add)")),
+		mcp.WithString("playlist_name", mcp.Description("playlist name for create, add, play, or update")),
+		mcp.WithString("description", mcp.Description("playlist description for create or update")),
+		mcp.WithString("query", mcp.Description("search text; top hit uri is added to the playlist")),
+		mcp.WithString("use_current", mcp.Description("true to add the currently playing track")),
+		mcp.WithNumber("search_id", mcp.Description("search_id from spotify_search")),
+		mcp.WithNumber("result_index", mcp.Description("index from that search")),
+		mcp.WithString("title", mcp.Description("title from that search")),
+		mcp.WithString("artist", mcp.Description("artist from that search")),
+	), playlistHandler(bus))
 }

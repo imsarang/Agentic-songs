@@ -44,6 +44,20 @@ func (s *Source) EnsureReady(ctx context.Context) error {
 	return err
 }
 
+// Relogin deletes the saved token and opens the authorize window again.
+func (s *Source) Relogin(ctx context.Context) error {
+	s.mu.Lock()
+	s.token = Token{}
+	path := s.path
+	id, secret, redirect := s.clientID, s.secret, s.redirect
+	s.mu.Unlock()
+	_ = os.Remove(path)
+	if err := Login(ctx, path, id, secret, redirect); err != nil {
+		return err
+	}
+	return s.Load()
+}
+
 func (s *Source) AccessToken(ctx context.Context) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

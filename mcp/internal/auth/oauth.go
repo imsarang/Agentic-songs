@@ -38,7 +38,8 @@ func Login(ctx context.Context, path, id, secret, redirect string) error {
 		"client_id":     {id},
 		"response_type": {"code"},
 		"redirect_uri":  {redirect},
-		"scope":         {"user-read-playback-state user-modify-playback-state user-read-currently-playing"},
+		"scope":         {"user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-modify-private playlist-modify-public"},
+		"show_dialog":   {"true"}, // force consent so new scopes are not skipped
 	}
 	link := "https://accounts.spotify.com/authorize?" + q.Encode()
 	log.Printf("login: %s", link)

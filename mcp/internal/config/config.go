@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	defaultDataDir = "mcp/data"
+	defaultDataDir = "data"
 	envClientID    = "SPOTIFY_CLIENT_ID"
 	envSecret      = "SPOTIFY_CLIENT_SECRET"
 	envRedirect    = "SPOTIFY_REDIRECT_URI"

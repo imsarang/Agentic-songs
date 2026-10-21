@@ -50,6 +50,7 @@ type Args struct {
 	Limit        int
 	Action       string
 	PlaylistName string
+	Description  string
 	Title        string
 	Artist       string
 	ResultIndex  int

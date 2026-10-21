@@ -18,3 +18,11 @@ type Device struct {
 	Name string
 	Type string
 }
+
+// Playlist is enough to find a list and add a track.
+type Playlist struct {
+	ID          string
+	Name        string
+	Description string
+	URI         string
+}

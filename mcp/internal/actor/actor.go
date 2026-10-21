@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -53,6 +54,8 @@ func dispatch(cmd runtime.Command, cfg config.Config, bus *runtime.Bus, client s
 		return control(cmd, client)
 	case runtime.KindNowPlaying:
 		return nowPlaying(cmd, client)
+	case runtime.KindPlaylistAdd:
+		return playlist(cmd, client, found)
 	default:
 		return runtime.Result{Err: fmt.Errorf("no command for %s", cmd.Kind)}
 	}
@@ -165,6 +168,135 @@ func formatHits(id int, hits []spotify.Hit) string {
 
 func formatBar(bar spotify.Bar) string {
 	return fmt.Sprintf("title=%s artist=%s uri=%s", bar.Title, bar.Artist, bar.URI)
+}
+
+func playlist(cmd runtime.Command, client spotify.Client, found *catalog) runtime.Result {
+	action := strings.TrimSpace(cmd.Args.Action)
+	if action == "" {
+		action = "add"
+	}
+	switch action {
+	case "list":
+		list, err := client.ListPlaylists(cmd.Ctx)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		return runtime.Result{Text: formatPlaylists(list)}
+	case "create":
+		pl, err := client.CreatePlaylist(cmd.Ctx, cmd.Args.PlaylistName, cmd.Args.Description)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		return runtime.Result{Text: fmt.Sprintf("id=%s name=%s uri=%s", pl.ID, pl.Name, pl.URI)}
+	case "add":
+		pl, err := findPlaylist(cmd.Ctx, client, cmd.Args.PlaylistName)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		uri, err := trackURI(cmd, client, found)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		if err := client.AddToPlaylist(cmd.Ctx, pl.ID, uri); err != nil {
+			return runtime.Result{Err: err}
+		}
+		return runtime.Result{Text: fmt.Sprintf("added uri=%s to playlist=%s id=%s", uri, pl.Name, pl.ID)}
+	case "play":
+		pl, err := findPlaylist(cmd.Ctx, client, cmd.Args.PlaylistName)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		uri := pl.URI
+		if uri == "" {
+			uri = "spotify:playlist:" + pl.ID
+		}
+		if err := client.PlayPlaylist(cmd.Ctx, uri); err != nil {
+			return runtime.Result{Err: err}
+		}
+		bar, err := client.NowPlaying(cmd.Ctx)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		return runtime.Result{Text: formatBar(bar)}
+	case "update":
+		pl, err := findPlaylist(cmd.Ctx, client, cmd.Args.PlaylistName)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		if err := client.UpdatePlaylistMetadata(cmd.Ctx, pl.ID, pl.Name, cmd.Args.Description); err != nil {
+			return runtime.Result{Err: err}
+		}
+		return runtime.Result{Text: fmt.Sprintf("updated id=%s name=%s description=%s", pl.ID, pl.Name, cmd.Args.Description)}
+	case "delete":
+		pl, err := findPlaylist(cmd.Ctx, client, cmd.Args.PlaylistName)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		if err := client.DeletePlaylist(cmd.Ctx, pl.ID); err != nil {
+			return runtime.Result{Err: err}
+		}
+		return runtime.Result{Text: fmt.Sprintf("deleted(unfollowed) id=%s name=%s", pl.ID, pl.Name)}
+	case "remove":
+		pl, err := findPlaylist(cmd.Ctx, client, cmd.Args.PlaylistName)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		uri, err := trackURI(cmd, client, found)
+		if err != nil {
+			return runtime.Result{Err: err}
+		}
+		if err := client.RemoveFromPlaylist(cmd.Ctx, pl.ID, uri); err != nil {
+			return runtime.Result{Err: err}
+		}
+		return runtime.Result{Text: fmt.Sprintf("removed uri=%s from playlist=%s id=%s", uri, pl.Name, pl.ID)}
+	default:
+		return runtime.Result{Err: fmt.Errorf("action must be list, create, add, play, or update")}
+	}
+}
+
+func findPlaylist(ctx context.Context, client spotify.Client, name string) (spotify.Playlist, error) {
+	list, err := client.ListPlaylists(ctx)
+	if err != nil {
+		return spotify.Playlist{}, err
+	}
+	want := strings.ToLower(strings.TrimSpace(name))
+	var names []string
+	for _, pl := range list {
+		names = append(names, pl.Name)
+		if strings.ToLower(pl.Name) == want {
+			return pl, nil
+		}
+	}
+	return spotify.Playlist{}, fmt.Errorf("playlist not found; visible=%s", strings.Join(names, ", "))
+}
+
+func trackURI(cmd runtime.Command, client spotify.Client, found *catalog) (string, error) {
+	if cmd.Args.UseCurrent {
+		bar, err := client.NowPlaying(cmd.Ctx)
+		if err != nil {
+			return "", err
+		}
+		if bar.URI == "" {
+			return "", fmt.Errorf("nothing_playing")
+		}
+		return bar.URI, nil
+	}
+	hit, err := pickHit(cmd, client, found)
+	if err != nil {
+		return "", err
+	}
+	return hit.URI, nil
+}
+
+func formatPlaylists(list []spotify.Playlist) string {
+	lines := make([]string, 0, len(list))
+	for _, pl := range list {
+		lines = append(lines, fmt.Sprintf("id=%s name=%s uri=%s", pl.ID, pl.Name, pl.URI))
+	}
+	if len(lines) == 0 {
+		return "no playlists"
+	}
+	return strings.Join(lines, "\n")
 }
 
 func publish(bus *runtime.Bus, event runtime.SessionEvent) {
