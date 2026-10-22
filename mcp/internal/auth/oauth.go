@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -26,7 +27,17 @@ func Login(ctx context.Context, path, id, secret, redirect string) error {
 		codeCh <- r.URL.Query().Get("code")
 		fmt.Fprint(w, "ok, close tab")
 	})
-	ln, err := net.Listen("tcp", u.Host)
+	// Spotify redirects the host browser to 127.0.0.1; in Docker we must
+	// listen on all interfaces so published port 4381 can reach us.
+	listenAddr := u.Host
+	if os.Getenv("SPOTIFY_IN_DOCKER") != "" {
+		port := u.Port()
+		if port == "" {
+			port = "4381"
+		}
+		listenAddr = ":" + port
+	}
+	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return err
 	}
@@ -43,6 +54,7 @@ func Login(ctx context.Context, path, id, secret, redirect string) error {
 	}
 	link := "https://accounts.spotify.com/authorize?" + q.Encode()
 	log.Printf("login: %s", link)
+	log.Printf("waiting for callback on %s (redirect_uri=%s)", listenAddr, redirect)
 	_ = exec.Command("xdg-open", link).Start()
 
 	select {

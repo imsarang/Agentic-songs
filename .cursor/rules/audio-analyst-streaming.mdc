@@ -1,0 +1,17 @@
+---
+description: Stream each audio-analyst sample to the user immediately
+globs:
+alwaysApply: true
+---
+
+# Audio analyst — stream each sample
+
+When using `audio_decisions` (audio-analyst MCP):
+
+1. Call it **right after** play / next / playlist play (with that `trackId`).
+2. **As soon as the tool returns**, post a short user-visible message with `summary_bullets` and `i/n`. Do not wait for the song to end. Do not batch samples into one final essay.
+3. Wait ~15s (or `wait_ms`), call again, **message again**. Repeat up to 5 times or until pause/end.
+4. On pause / track end / next: one call with `finalize=true`, then message the average.
+5. Never invent song descriptions if `silence` or `ok=false`.
+
+The MCP server does not push to chat — **you** must write after every tool result.

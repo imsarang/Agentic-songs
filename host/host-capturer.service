@@ -1,0 +1,15 @@
+[Unit]
+Description=Shanks host wire loop (Python capture → Redis)
+After=network.target sound.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/Projects/shanks/host
+Environment=REDIS_URL=redis://127.0.0.1:6380/0
+# one-time: cd host && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+ExecStart=%h/Documents/Projects/shanks/host/run.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

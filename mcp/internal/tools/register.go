@@ -18,7 +18,7 @@ func Register(s *server.MCPServer, bus *runtime.Bus) {
 	), searchHandler(bus))
 
 	s.AddTool(mcp.NewTool("spotify_play",
-		mcp.WithDescription("Play a query's top hit, or a handle from the latest search. Returns the now-playing bar."),
+		mcp.WithDescription("Play a query's top hit, or a handle from the latest search. Returns the now-playing bar plus track analytics; summarize analytics for the user as short bullets."),
 		mcp.WithString("query", mcp.Description("Play the top hit for this text")),
 		mcp.WithNumber("search_id", mcp.Description("search_id from the latest spotify_search result")),
 		mcp.WithNumber("result_index", mcp.Description("index from that search result")),
@@ -27,7 +27,7 @@ func Register(s *server.MCPServer, bus *runtime.Bus) {
 	), playHandler(bus))
 
 	s.AddTool(mcp.NewTool("spotify_control",
-		mcp.WithDescription("Pause, resume, or skip, then return the now-playing bar."),
+		mcp.WithDescription("Pause, resume, or skip, then return the now-playing bar plus track analytics; summarize analytics for the user as short bullets."),
 		mcp.WithString("action", mcp.Required(), mcp.Description("pause, resume, next, or previous")),
 	), controlHandler(bus))
 

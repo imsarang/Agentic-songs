@@ -1,0 +1,73 @@
+services:
+  redis:
+    image: redis:7-alpine
+    # :6380 on host so ./host/run.sh can write wire features (host :6379 often taken)
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+  player:
+    image: zenika/alpine-chrome
+    user: root
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        mkdir -p /data/profile
+        rm -f /data/profile/SingletonLock /data/profile/SingletonCookie /data/profile/SingletonSocket
+        while true; do
+          rm -f /data/profile/SingletonLock /data/profile/SingletonCookie /data/profile/SingletonSocket
+          chromium-browser \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-dev-shm-usage \
+            --remote-debugging-port=9222 \
+            --user-data-dir=/data/profile \
+            https://open.spotify.com || true
+          echo "chromium exited; restarting in 2s"
+          sleep 2
+        done
+    volumes:
+      - player-data:/data
+    shm_size: "1gb"
+    restart: unless-stopped
+
+  spotify:
+    build: ./mcp
+    env_file: ./mcp/.env
+    environment:
+      SPOTIFY_DATA_DIR: /data
+      MCP_TRANSPORT: http
+      MCP_ADDR: ":8080"
+      SPOTIFY_IN_DOCKER: "1"
+    volumes:
+      - spotify-data:/data
+    ports:
+      - "8080:8080"
+      - "4381:4381"
+    depends_on: [player]
+
+  # MCP brain only — reads Redis wire written by ./host/run.sh (systemd/process)
+  audio-analyst:
+    build:
+      context: ./audio-analyst
+      args:
+        UID: 1000
+        GID: 1000
+    user: "1000:1000"
+    environment:
+      MCP_TRANSPORT: http
+      MCP_ADDR: ":8090"
+      REDIS_URL: redis://redis:6379/0
+      WIRE_KEY: analyst:wire:latest
+      SAMPLE_COUNT: "5"
+      SAMPLE_GAP_MS: "15000"
+    ports:
+      - "8090:8090"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  spotify-data:
+  player-data:

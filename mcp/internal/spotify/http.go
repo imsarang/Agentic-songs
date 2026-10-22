@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"strconv"
 	"time"
@@ -36,9 +37,12 @@ func (c *HTTPClient) ensureDeviceID(ctx context.Context) (string, error) {
 		return id, nil
 	}
 	log.Printf("no device; opening web player")
-	if err := exec.Command("xdg-open", "https://open.spotify.com").Start(); err != nil {
-		return "", fmt.Errorf("open web player: %w", err)
+	if os.Getenv("SPOTIFY_IN_DOCKER") == "" {
+		if err := exec.Command("xdg-open", "https://open.spotify.com").Start(); err != nil {
+			return "", fmt.Errorf("open web player: %w", err)
+		}
 	}
+	// In Docker the player service already holds open.spotify.com; just poll.
 	deadline := time.Now().Add(45 * time.Second)
 	for time.Now().Before(deadline) {
 		select {
@@ -248,6 +252,17 @@ func (c *HTTPClient) RemoveFromPlaylist(ctx context.Context, playlistID, trackUR
 		"items": []map[string]string{{"uri": trackURI}},
 	}
 	return c.do(ctx, "DELETE", "/playlists/"+playlistID+"/items", body, nil)
+}
+
+func (c *HTTPClient) AudioFeatures(ctx context.Context, trackID string) (TrackFeatures, error) {
+	if trackID == "" {
+		return TrackFeatures{}, fmt.Errorf("track id required")
+	}
+	var out TrackFeatures
+	if err := c.do(ctx, "GET", "/audio-features/"+url.PathEscape(trackID), nil, &out); err != nil {
+		return TrackFeatures{}, err
+	}
+	return out, nil
 }
 
 func (c *HTTPClient) do(ctx context.Context, method, path string, in, out any) error {

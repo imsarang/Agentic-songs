@@ -94,7 +94,7 @@ func play(cmd runtime.Command, client spotify.Client, found *catalog) runtime.Re
 	if err != nil {
 		return runtime.Result{Err: err}
 	}
-	return runtime.Result{Text: formatBar(bar)}
+	return runtime.Result{Text: withAnalytics(cmd.Ctx, client, bar)}
 }
 
 func control(cmd runtime.Command, client spotify.Client) runtime.Result {
@@ -105,7 +105,7 @@ func control(cmd runtime.Command, client spotify.Client) runtime.Result {
 	if err != nil {
 		return runtime.Result{Err: err}
 	}
-	return runtime.Result{Text: formatBar(bar)}
+	return runtime.Result{Text: withAnalytics(cmd.Ctx, client, bar)}
 }
 
 func nowPlaying(cmd runtime.Command, client spotify.Client) runtime.Result {
@@ -116,7 +116,7 @@ func nowPlaying(cmd runtime.Command, client spotify.Client) runtime.Result {
 	if bar.Title == "" {
 		return runtime.Result{Err: fmt.Errorf("nothing_playing")}
 	}
-	return runtime.Result{Text: formatBar(bar)}
+	return runtime.Result{Text: withAnalytics(cmd.Ctx, client, bar)}
 }
 
 func pickHit(cmd runtime.Command, client spotify.Client, found *catalog) (spotify.Hit, error) {
@@ -305,4 +305,46 @@ func publish(bus *runtime.Bus, event runtime.SessionEvent) {
 	case <-time.After(2 * time.Second):
 		log.Printf("session event not delivered: %s", event.Type)
 	}
+}
+
+func withAnalytics(ctx context.Context, client spotify.Client, bar spotify.Bar) string {
+	text := formatBar(bar)
+	id := trackIDFromURI(bar.URI)
+	if id == "" {
+		return text + "\nanalytics: unavailable (no track id on now-playing)"
+	}
+	feat, err := client.AudioFeatures(ctx, id)
+	if err != nil {
+		return text + "\nanalytics: unavailable — Spotify blocks /audio-features for this app (403). That endpoint is deprecated for Development Mode."
+	}
+	return text + "\n" + provideAnalytics(feat)
+}
+
+func trackIDFromURI(uri string) string {
+	// spotify:track:<id>
+	const p = "spotify:track:"
+	if !strings.HasPrefix(uri, p) {
+		return ""
+	}
+	return strings.TrimPrefix(uri, p)
+}
+
+func provideAnalytics(f spotify.TrackFeatures) string {
+	mode := "minor"
+	if f.Mode == 1 {
+		mode = "major"
+	}
+	return strings.Join([]string{
+		"analytics (present to the user as a short summary or bullet list; do not dump raw keys):",
+		fmt.Sprintf("- acousticness: %.3f (0=electric … 1=acoustic)", f.Acousticness),
+		fmt.Sprintf("- danceability: %.3f", f.Danceability),
+		fmt.Sprintf("- energy: %.3f", f.Energy),
+		fmt.Sprintf("- valence: %.3f (0=sad … 1=happy)", f.Valence),
+		fmt.Sprintf("- tempo: %.1f bpm", f.Tempo),
+		fmt.Sprintf("- key: %d  mode: %s", f.Key, mode),
+		fmt.Sprintf("- loudness: %.1f dB", f.Loudness),
+		fmt.Sprintf("- speechiness: %.3f", f.Speechiness),
+		fmt.Sprintf("- liveness: %.3f", f.Liveness),
+		fmt.Sprintf("- time_signature: %.0f", f.TimeSignature),
+	}, "\n")
 }
