@@ -1,5 +1,8 @@
 mcp/.env
 mcp/bin/
 mcp/data/
+agent/.env
+ui/.env
 .venv/
 **/.venv/
+agent/shanks-agent
