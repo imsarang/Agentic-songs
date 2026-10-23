@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/mark3labs/mcp-go/server"
-	"shanks/internal/runtime"
+	"shanks/internal/spotify"
 	"shanks/internal/tools"
 )
 
@@ -15,9 +15,9 @@ const (
 	envAddr      = "MCP_ADDR"      // listen addr for http, default :8080
 )
 
-func Serve(bus *runtime.Bus) {
+func Serve(client spotify.Client) {
 	s := server.NewMCPServer("spotify", "0.1.0", server.WithToolCapabilities(true))
-	tools.Register(s, bus)
+	tools.Register(s, client)
 
 	switch strings.ToLower(strings.TrimSpace(os.Getenv(envTransport))) {
 	case "http":
@@ -44,7 +44,6 @@ func serveHTTP(s *server.MCPServer) {
 		s,
 		server.WithEndpointPath("/mcp"),
 		server.WithStateLess(true),
-		// allow calls via docker service hostname, not only localhost
 		server.WithDisableLocalhostProtection(true),
 	)
 	log.Printf("mcp http transport addr=%s path=/mcp", addr)

@@ -2,17 +2,25 @@ package tools
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"shanks/internal/runtime"
+	"shanks/internal/spotify"
 )
 
-func nowPlayingHandler(bus *runtime.Bus) server.ToolHandlerFunc {
+func nowPlayingHandler(client spotify.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		if err := waitReady(ctx, bus); err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
+		if err := client.EnsureAuth(ctx); err != nil {
+			return textOrErr("", err)
 		}
-		return reply(call(ctx, bus, runtime.KindNowPlaying, runtime.Args{}))
+		bar, err := client.NowPlaying(ctx)
+		if err != nil {
+			return textOrErr("", err)
+		}
+		if bar.Title == "" {
+			return textOrErr("", fmt.Errorf("nothing_playing"))
+		}
+		return textOrErr(spotify.WithAnalytics(ctx, client, bar), nil)
 	}
 }

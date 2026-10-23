@@ -6,13 +6,13 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"shanks/internal/runtime"
+	"shanks/internal/spotify"
 )
 
-func controlHandler(bus *runtime.Bus) server.ToolHandlerFunc {
+func controlHandler(client spotify.Client) server.ToolHandlerFunc {
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		if err := waitReady(ctx, bus); err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
+		if err := client.EnsureAuth(ctx); err != nil {
+			return textOrErr("", err)
 		}
 		action := strings.TrimSpace(req.GetString("action", ""))
 		switch action {
@@ -20,6 +20,13 @@ func controlHandler(bus *runtime.Bus) server.ToolHandlerFunc {
 		default:
 			return mcp.NewToolResultError("action must be pause, resume, next, or previous"), nil
 		}
-		return reply(call(ctx, bus, runtime.KindControl, runtime.Args{Action: action}))
+		if err := client.Control(ctx, action); err != nil {
+			return textOrErr("", err)
+		}
+		bar, err := client.NowPlaying(ctx)
+		if err != nil {
+			return textOrErr("", err)
+		}
+		return textOrErr(spotify.WithAnalytics(ctx, client, bar), nil)
 	}
 }

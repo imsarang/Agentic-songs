@@ -92,9 +92,11 @@ Host tools needed: `pw-record`, `wpctl` (PipeWire), and Redis reachable on the U
 
 ## How to run
 
+- **Stack + ear (recommended):** from repo root, `make up` / `make down`  
+  - starts Docker Compose, then `systemctl --user start` the host wire  
+  - does **not** enable the unit on boot — ear only runs while you `make up`
 - **One sample:** `./sample.sh`
-- **Continuous ear:** `./run.sh`
-- **Optional boot:** copy/enable `host-capturer.service` for your user systemd (path inside the unit is machine-specific).
+- **Continuous ear alone:** `./run.sh` or `systemctl --user start host-capturer.service` (unit lives in `~/.config/systemd/user/`)
 
 ---
 

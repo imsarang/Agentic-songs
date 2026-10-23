@@ -6,23 +6,24 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"shanks/internal/runtime"
+	"shanks/internal/cache"
+	"shanks/internal/spotify"
 )
 
-func searchHandler(bus *runtime.Bus) server.ToolHandlerFunc {
+func searchHandler(client spotify.Client, found *cache.Search) server.ToolHandlerFunc {
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		if err := waitReady(ctx, bus); err != nil {
-			return mcp.NewToolResultError(err.Error()), nil
+		if err := client.EnsureAuth(ctx); err != nil {
+			return textOrErr("", err)
 		}
-
 		query := strings.TrimSpace(req.GetString("query", ""))
-
 		if query == "" {
 			return mcp.NewToolResultError("query is required"), nil
 		}
-		return reply(call(ctx, bus, runtime.KindSearch, runtime.Args{
-			Query: query,
-			Limit: req.GetInt("limit", 5),
-		}))
+		hits, err := client.Search(ctx, query, req.GetInt("limit", 5))
+		if err != nil {
+			return textOrErr("", err)
+		}
+		id := found.Store(query, hits)
+		return textOrErr(spotify.FormatHits(id, hits), nil)
 	}
 }

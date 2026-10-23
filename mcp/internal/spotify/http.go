@@ -36,13 +36,13 @@ func (c *HTTPClient) ensureDeviceID(ctx context.Context) (string, error) {
 	} else if id != "" {
 		return id, nil
 	}
-	log.Printf("no device; opening web player")
+	log.Printf("no device; waiting for host Spotify (or open web player)")
 	if os.Getenv("SPOTIFY_IN_DOCKER") == "" {
 		if err := exec.Command("xdg-open", "https://open.spotify.com").Start(); err != nil {
 			return "", fmt.Errorf("open web player: %w", err)
 		}
 	}
-	// In Docker the player service already holds open.spotify.com; just poll.
+	// In Docker, make up starts desktop Spotify; poll Connect devices.
 	deadline := time.Now().Add(45 * time.Second)
 	for time.Now().Before(deadline) {
 		select {

@@ -3,19 +3,18 @@ package tools
 import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"shanks/internal/runtime"
+	"shanks/internal/cache"
+	"shanks/internal/spotify"
 )
 
-func Register(s *server.MCPServer, bus *runtime.Bus) {
-	s.AddTool(mcp.NewTool("spotify_session",
-		mcp.WithDescription("Report whether the Spotify API token is ready. No browser."),
-	), sessionHandler(bus))
+func Register(s *server.MCPServer, client spotify.Client) {
+	found := &cache.Search{}
 
 	s.AddTool(mcp.NewTool("spotify_search",
 		mcp.WithDescription("Search tracks. Returns handles and does not start playback."),
 		mcp.WithString("query", mcp.Required(), mcp.Description("Song or artist text")),
 		mcp.WithNumber("limit", mcp.Description("How many rows to return, from 1 to 8")),
-	), searchHandler(bus))
+	), searchHandler(client, found))
 
 	s.AddTool(mcp.NewTool("spotify_play",
 		mcp.WithDescription("Play a query's top hit, or a handle from the latest search. Returns the now-playing bar plus track analytics; summarize analytics for the user as short bullets."),
@@ -24,16 +23,16 @@ func Register(s *server.MCPServer, bus *runtime.Bus) {
 		mcp.WithNumber("result_index", mcp.Description("index from that search result")),
 		mcp.WithString("title", mcp.Description("title from that search result")),
 		mcp.WithString("artist", mcp.Description("artist from that search result")),
-	), playHandler(bus))
+	), playHandler(client, found))
 
 	s.AddTool(mcp.NewTool("spotify_control",
 		mcp.WithDescription("Pause, resume, or skip, then return the now-playing bar plus track analytics; summarize analytics for the user as short bullets."),
 		mcp.WithString("action", mcp.Required(), mcp.Description("pause, resume, next, or previous")),
-	), controlHandler(bus))
+	), controlHandler(client))
 
 	s.AddTool(mcp.NewTool("spotify_now_playing",
 		mcp.WithDescription("Read the player bar. Returns nothing_playing when the bar is empty."),
-	), nowPlayingHandler(bus))
+	), nowPlayingHandler(client))
 
 	s.AddTool(mcp.NewTool("spotify_playlist",
 		mcp.WithDescription("List/create/add/play/update a playlist. action=list|create|add|play|update."),
@@ -46,5 +45,5 @@ func Register(s *server.MCPServer, bus *runtime.Bus) {
 		mcp.WithNumber("result_index", mcp.Description("index from that search")),
 		mcp.WithString("title", mcp.Description("title from that search")),
 		mcp.WithString("artist", mcp.Description("artist from that search")),
-	), playlistHandler(bus))
+	), playlistHandler(client, found))
 }
