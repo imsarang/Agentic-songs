@@ -22,6 +22,35 @@ services:
       - "8080:8080"
       - "4381:4381"
 
+  # ReAct agent — talks to spotify MCP; LLM may be host LM Studio via host.docker.internal
+  agent:
+    build: ./agent
+    env_file: ./agent/.env
+    environment:
+      AGENT_HOST: "0.0.0.0"
+      AGENT_PORT: "8001"
+      MCP_URL: http://spotify:8080/mcp
+      # Reach LM Studio / Ollama on the host (overrides 127.0.0.1 from .env)
+      LOCAL_BASE_URL: http://host.docker.internal:1234/v1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8001:8001"
+    depends_on:
+      - spotify
+    restart: unless-stopped
+
+  # Terminal REPL — interactive only: docker compose run --rm ui
+  ui:
+    profiles: ["ui"]
+    build: ./ui
+    environment:
+      AGENT_TURN_URL: http://agent:8001/turn
+      THREAD_ID: default
+    depends_on:
+      - agent
+    stdin_open: true
+    tty: true
 
   # MCP brain only — reads Redis wire written by ./host/run.sh (systemd/process)
   audio-analyst:

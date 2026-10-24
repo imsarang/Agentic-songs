@@ -106,13 +106,14 @@ Server → client: `tool_start` / `tool_end` / `assistant_message` / `error` / `
 
 ### Phase 6 — Terminal UI
 - `ui/` Rich REPL + `transport.py`
-- Talks only to `ws://agent:8000/ws`
+- Talks only to `POST /turn` SSE (`AGENT_TURN_URL`, default `http://127.0.0.1:8001/turn`)
 - **Exit:** type in UI → see tool events + final answer
 
 ### Phase 7 — Docker Compose
-- `agent` + `ui` services next to `spotify`
-- `MCP_URL=http://spotify:8080/mcp`, `AGENT_WS_URL=ws://agent:8000/ws`
-- **Exit:** `compose up spotify agent` + `compose run ui` works end-to-end
+- `agent` + `ui` (profile) next to `spotify`
+- `MCP_URL=http://spotify:8080/mcp`, `AGENT_TURN_URL=http://agent:8001/turn`
+- `LOCAL_BASE_URL=http://host.docker.internal:1234/v1` for host LM Studio
+- **Exit:** `compose up -d spotify agent` + `compose run --rm ui` works end-to-end
 
 ### Phase 8 — LangSmith + harden
 - `observability.py`: tracing env, tags, `thread_id`

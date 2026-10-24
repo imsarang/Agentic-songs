@@ -1,9 +1,11 @@
 import uvicorn
 
 from shanks_agent.config import get_settings
+from shanks_agent.logging_setup import setup_logging
 
 
 def main() -> None:
+    setup_logging()
     settings = get_settings()
     uvicorn.run(
         "shanks_agent.api.app:app",

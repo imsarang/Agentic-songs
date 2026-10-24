@@ -1,0 +1,1 @@
+"""Shanks terminal UI."""

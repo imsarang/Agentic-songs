@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 
 from mcp import ClientSession
 
 from shanks_agent.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 try:
     from mcp.client.streamable_http import streamable_http_client as _http_client
@@ -33,9 +36,12 @@ class MCPSession:
 
     async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> str:
         args = arguments or {}
+        logger.info("mcp call_tool name=%s args=%s url=%s", name, args, self._url)
         async with _connected(self._url) as session:
             result = await session.call_tool(name, args)
-            return _result_text(result)
+            text = _result_text(result)
+            logger.info("mcp call_tool done name=%s bytes=%d", name, len(text))
+            return text
 
 
 @asynccontextmanager

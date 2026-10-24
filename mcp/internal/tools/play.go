@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -29,8 +30,12 @@ func playHandler(client spotify.Client, found *cache.Search) server.ToolHandlerF
 		}
 		bar, err := client.NowPlaying(ctx)
 		if err != nil {
-			return textOrErr("", err)
+			return textOrErr(fmt.Sprintf("requested title=%s artist=%s uri=%s\nnow_playing: error: %v", hit.Title, hit.Artist, hit.URI, err), nil)
 		}
-		return textOrErr(spotify.WithAnalytics(ctx, client, bar), nil)
+		out := fmt.Sprintf("requested title=%s artist=%s uri=%s\n%s", hit.Title, hit.Artist, hit.URI, spotify.WithAnalytics(ctx, client, bar))
+		if bar.URI != "" && bar.URI != hit.URI {
+			out += "\nmismatch: player bar differs from requested track — desktop Spotify may be hung or on another device; open Spotify and play anything once, then retry"
+		}
+		return textOrErr(out, nil)
 	}
 }
