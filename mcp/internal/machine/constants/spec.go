@@ -1,5 +1,20 @@
 package constants
 
+const (
+	// CPU model, sockets, cores, threads, and the hypervisor flag.
+	PathCPUInfo = "/proc/cpuinfo"
+	// Seconds since boot. The first field is the uptime.
+	PathUptime = "/proc/uptime"
+	// Currently mounted filesystems.
+	PathMounts = "/proc/mounts"
+	// Firmware identity directory. The files below name the vendor, product, and chassis.
+	PathDMIDir         = "/sys/class/dmi/id/"
+	FileDMIVendor      = "sys_vendor"
+	FileDMIProduct     = "product_name"
+	FileDMIVersion     = "product_version"
+	FileDMIChassisType = "chassis_type"
+)
+
 type Spec struct {
 	Hostname      string       `json:"hostname"`
 	Vendor        string       `json:"vendor"`

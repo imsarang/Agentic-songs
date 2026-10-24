@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"shanks/internal/machine/constants"
+	"shanks/internal/machine/proc"
 )
 
 func ReadSpec() (constants.Spec, error) {
@@ -23,16 +24,16 @@ func ReadSpec() (constants.Spec, error) {
 	cpu := readCPU()
 	ram, swap := readMem()
 	uptime := readUptime()
-	vendor := readDMI("sys_vendor")
-	product := readDMI("product_name")
-	version := readDMI("product_version")
+	vendor := readDMI(constants.FileDMIVendor)
+	product := readDMI(constants.FileDMIProduct)
+	version := readDMI(constants.FileDMIVersion)
 
 	return constants.Spec{
 		Hostname:      host,
 		Vendor:        vendor,
 		Product:       product,
 		Version:       version,
-		Chassis:       chassisName(readDMI("chassis_type")),
+		Chassis:       chassisName(readDMI(constants.FileDMIChassisType)),
 		Virtual:       virtualKind(cpu.hypervisor, product, vendor),
 		OS:            cString(u.Sysname[:]),
 		Kernel:        cString(u.Release[:]),
@@ -50,7 +51,7 @@ type cpuRead struct {
 }
 
 func readCPU() cpuRead {
-	f, err := os.Open("/proc/cpuinfo")
+	f, err := os.Open(constants.PathCPUInfo)
 	if err != nil {
 		return cpuRead{}
 	}
@@ -99,33 +100,12 @@ func readCPU() cpuRead {
 }
 
 func readMem() (ram, swap uint64) {
-	f, err := os.Open("/proc/meminfo")
-	if err != nil {
-		return 0, 0
-	}
-	defer f.Close()
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		fields := strings.Fields(sc.Text())
-		if len(fields) < 2 {
-			continue
-		}
-		n, err := strconv.ParseUint(fields[1], 10, 64)
-		if err != nil {
-			continue
-		}
-		switch fields[0] {
-		case "MemTotal:":
-			ram = n * 1024
-		case "SwapTotal:":
-			swap = n * 1024
-		}
-	}
-	return ram, swap
+	mem := proc.MeminfoKB()
+	return mem["MemTotal"] * 1024, mem["SwapTotal"] * 1024
 }
 
 func readUptime() float64 {
-	b, err := os.ReadFile("/proc/uptime")
+	b, err := os.ReadFile(constants.PathUptime)
 	if err != nil {
 		return 0
 	}
@@ -141,7 +121,7 @@ func readUptime() float64 {
 }
 
 func readFilesystems() []constants.Filesystem {
-	f, err := os.Open("/proc/mounts")
+	f, err := os.Open(constants.PathMounts)
 	if err != nil {
 		return nil
 	}
@@ -221,7 +201,7 @@ func chassisName(code string) string {
 }
 
 func readDMI(name string) string {
-	b, err := os.ReadFile("/sys/class/dmi/id/" + name)
+	b, err := os.ReadFile(constants.PathDMIDir + name)
 	if err != nil {
 		return ""
 	}
