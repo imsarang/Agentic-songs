@@ -3,6 +3,7 @@ mcp/bin/
 mcp/data/
 agent/.env
 ui/.env
+mcp/machine.env
 .venv/
 **/.venv/
 agent/shanks-agent
