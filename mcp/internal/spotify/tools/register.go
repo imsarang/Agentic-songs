@@ -3,8 +3,8 @@ package tools
 import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"shanks/internal/cache"
 	"shanks/internal/spotify"
+	"shanks/internal/spotify/cache"
 )
 
 func Register(s *server.MCPServer, client spotify.Client) {

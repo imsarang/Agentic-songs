@@ -1,4 +1,4 @@
-package mcp
+package transport
 
 import (
 	"log"
@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/mark3labs/mcp-go/server"
-	"shanks/internal/spotify"
-	"shanks/internal/tools"
 )
 
 const (
@@ -15,9 +13,11 @@ const (
 	envAddr      = "MCP_ADDR"      // listen addr for http, default :8080
 )
 
-func Serve(client spotify.Client) {
-	s := server.NewMCPServer("spotify", "0.1.0", server.WithToolCapabilities(true))
-	tools.Register(s, client)
+// Serve builds an MCP server, lets the use case register its tools, and
+// listens on stdio or streamable HTTP. The transport does not know the tools.
+func Serve(name, version string, register func(*server.MCPServer)) {
+	s := server.NewMCPServer(name, version, server.WithToolCapabilities(true))
+	register(s)
 
 	switch strings.ToLower(strings.TrimSpace(os.Getenv(envTransport))) {
 	case "http":

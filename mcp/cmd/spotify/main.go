@@ -4,10 +4,12 @@ import (
 	"log"
 	"os"
 
-	"shanks/internal/auth"
-	"shanks/internal/config"
-	"shanks/internal/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"shanks/internal/spotify"
+	"shanks/internal/spotify/auth"
+	"shanks/internal/spotify/config"
+	"shanks/internal/spotify/tools"
+	"shanks/internal/transport"
 )
 
 func main() {
@@ -26,6 +28,8 @@ func run() error {
 
 	tokens := auth.NewSource(auth.Path(cfg.DataDir), cfg.ClientID, cfg.ClientSecret, cfg.RedirectURI)
 	client := spotify.NewHTTPClient(tokens)
-	mcp.Serve(client)
+	transport.Serve("spotify", "0.1.0", func(s *server.MCPServer) {
+		tools.Register(s, client)
+	})
 	return nil
 }

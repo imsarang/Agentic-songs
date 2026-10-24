@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	"shanks/internal/auth"
+	"shanks/internal/spotify/auth"
 )
 
 type HTTPClient struct {
