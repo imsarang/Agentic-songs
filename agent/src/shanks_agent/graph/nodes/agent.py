@@ -61,7 +61,13 @@ def make_agent_node(llm: FailoverLLM):
             *list(state.get("messages") or []),
         ]
         ai = await llm.acomplete(messages)
-        content = ai.content if isinstance(ai.content, str) else str(ai.content)
+        # Anthropic may return [{thinking…}, {type:text, text:…}] — keep text only
+        if isinstance(ai.content, list):
+            content = "".join(
+                b.get("text", "") for b in ai.content if isinstance(b, dict) and b.get("type") == "text"
+            )
+        else:
+            content = str(ai.content or "")
         decision = _parse(content)
         sink = list(state.get("event_sink") or [])
         logger.info("node=agent decision=%s", decision)

@@ -32,10 +32,10 @@ class AnthropicLLM(LLMClient):
     def __init__(self, settings: Settings) -> None:
         if not settings.anthropic_api_key:
             raise ValueError("ANTHROPIC_API_KEY is empty")
+        # Newer Claude models (e.g. Haiku 4.5/5.x) reject `temperature`.
         self._model = ChatAnthropic(
             api_key=settings.anthropic_api_key,
             model=settings.anthropic_model,
-            temperature=0,
         )
 
     async def acomplete(self, messages: list[BaseMessage]) -> AIMessage:

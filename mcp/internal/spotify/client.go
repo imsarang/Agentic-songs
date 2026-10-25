@@ -16,5 +16,4 @@ type Client interface {
 	UpdatePlaylistMetadata(ctx context.Context, playlistID, name, description string) error
 	DeletePlaylist(ctx context.Context, playlistID string) error
 	RemoveFromPlaylist(ctx context.Context, playlistID, trackURI string) error
-	AudioFeatures(ctx context.Context, trackId string) (TrackFeatures, error)
 }

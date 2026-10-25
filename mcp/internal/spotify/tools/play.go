@@ -32,7 +32,7 @@ func playHandler(client spotify.Client, found *cache.Search) server.ToolHandlerF
 		if err != nil {
 			return textOrErr(fmt.Sprintf("requested title=%s artist=%s uri=%s\nnow_playing: error: %v", hit.Title, hit.Artist, hit.URI, err), nil)
 		}
-		out := fmt.Sprintf("requested title=%s artist=%s uri=%s\n%s", hit.Title, hit.Artist, hit.URI, spotify.WithAnalytics(ctx, client, bar))
+		out := fmt.Sprintf("requested title=%s artist=%s uri=%s\n%s", hit.Title, hit.Artist, hit.URI, spotify.FormatBar(bar))
 		if bar.URI != "" && bar.URI != hit.URI {
 			out += "\nmismatch: player bar differs from requested track — desktop Spotify may be hung or on another device; open Spotify and play anything once, then retry"
 		}

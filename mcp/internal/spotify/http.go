@@ -254,17 +254,6 @@ func (c *HTTPClient) RemoveFromPlaylist(ctx context.Context, playlistID, trackUR
 	return c.do(ctx, "DELETE", "/playlists/"+playlistID+"/items", body, nil)
 }
 
-func (c *HTTPClient) AudioFeatures(ctx context.Context, trackID string) (TrackFeatures, error) {
-	if trackID == "" {
-		return TrackFeatures{}, fmt.Errorf("track id required")
-	}
-	var out TrackFeatures
-	if err := c.do(ctx, "GET", "/audio-features/"+url.PathEscape(trackID), nil, &out); err != nil {
-		return TrackFeatures{}, err
-	}
-	return out, nil
-}
-
 func (c *HTTPClient) do(ctx context.Context, method, path string, in, out any) error {
 	for attempt := 0; attempt < 2; attempt++ {
 		tok, err := c.tokens.AccessToken(ctx)

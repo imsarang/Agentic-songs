@@ -21,6 +21,6 @@ func nowPlayingHandler(client spotify.Client) server.ToolHandlerFunc {
 		if bar.Title == "" {
 			return textOrErr("", fmt.Errorf("nothing_playing"))
 		}
-		return textOrErr(spotify.WithAnalytics(ctx, client, bar), nil)
+		return textOrErr(spotify.FormatBar(bar), nil)
 	}
 }
