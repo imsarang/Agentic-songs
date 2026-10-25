@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class TurnRequest(BaseModel):
     text: str = Field(min_length=1)
     thread_id: str = "default"
+    run_id: str | None = None
     # spotify | machine | omit → LLM classifies
     domain: str | None = None
 

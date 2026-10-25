@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 
 from shanks_agent.api.schemas import MCPCallRequest, TurnRequest
+from shanks_agent.observability import configure_tracing
 from shanks_agent.graph.build import get_graph, run_turn
 from shanks_agent.llm import build_failover_llm
 from shanks_agent.mcp.session import MCPSession, format_mcp_error
@@ -15,6 +16,7 @@ app = FastAPI(title="shanks-agent", version="0.1.0")
 
 @app.on_event('startup')
 async def _warmup_graph() -> None:
+    configure_tracing()
     get_graph()
     
 @app.get("/health")
@@ -33,6 +35,7 @@ async def turn(body: TurnRequest) -> StreamingResponse:
             async for event in run_turn(
                 body.text,
                 thread_id=body.thread_id,
+                run_id=body.run_id,
                 domain=body.domain,
             ):
                 yield _sse(event)

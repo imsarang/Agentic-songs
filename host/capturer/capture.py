@@ -10,25 +10,41 @@ import numpy as np
 
 
 def window_seconds() -> float:
-    return max(0.5, float(os.getenv("WINDOW_MS", "5000")) / 1000.0)
+    return max(0.5, float(os.getenv("WINDOW_MS", "1000")) / 1000.0)
 
 
 def sample_rate() -> int:
     return int(os.getenv("SAMPLE_RATE", "44100"))
 
 
-def _resolve_sink_target() -> str:
-    env = os.getenv("AUDIO_TARGET", "").strip()
-    if env:
-        return env
+def _node_serial(node_id: str) -> tuple[str, str]:
+    """pw-record --target takes object.serial, not the wpctl id.
 
+    On this machine the default sink id is 58 and its serial is 59.
+    Serial 58 is the webcam, so passing the id records the mic.
+    """
+    try:
+        out = subprocess.check_output(
+            ["wpctl", "inspect", node_id], text=True, stderr=subprocess.DEVNULL
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as e:
+        raise RuntimeError(f"wpctl inspect {node_id} failed") from e
+    serial = re.search(r'object\.serial\s*=\s*"(\d+)"', out)
+    desc = re.search(r'node\.description\s*=\s*"([^"]+)"', out)
+    if not serial:
+        raise RuntimeError(f"node {node_id} has no object.serial")
+    name = desc.group(1) if desc else node_id
+    return serial.group(1), name
+
+
+def _default_sink_id() -> str:
     try:
         out = subprocess.check_output(
             ["wpctl", "status"], text=True, stderr=subprocess.DEVNULL
         )
     except (FileNotFoundError, subprocess.CalledProcessError) as e:
         raise RuntimeError(
-            "wpctl not available; set AUDIO_TARGET to a PipeWire sink id/name"
+            "wpctl not available; set AUDIO_TARGET to a PipeWire sink id"
         ) from e
 
     in_audio = False
@@ -59,10 +75,18 @@ def _resolve_sink_target() -> str:
     )
 
 
+def _resolve_sink_target() -> tuple[str, str]:
+    env = os.getenv("AUDIO_TARGET", "").strip()
+    node_id = env if env.isdigit() else _default_sink_id()
+    if env and not env.isdigit():
+        return env, env
+    return _node_serial(node_id)
+
+
 def record_slice() -> tuple[np.ndarray, dict]:
     sr = sample_rate()
     seconds = window_seconds()
-    target = _resolve_sink_target()
+    target, target_name = _resolve_sink_target()
     frames = int(sr * seconds)
     nbytes = frames * 4
 
@@ -120,7 +144,7 @@ def record_slice() -> tuple[np.ndarray, dict]:
     device_meta = {
         "device": "pw-record",
         "target": target,
-        "name": f"sink:{target}",
+        "name": target_name,
         "max_input_channels": 1,
         "default_samplerate": float(sr),
     }

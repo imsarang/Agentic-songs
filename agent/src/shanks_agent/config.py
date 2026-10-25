@@ -14,26 +14,28 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    agent_host: str = "0.0.0.0"
-    agent_port: int = 8000
-    mcp_url: str = "http://127.0.0.1:8080/mcp"  # spotify MCP
-    machine_mcp_url: str = "http://127.0.0.1:8092/mcp"
+    agent_host: str
+    agent_port: int
+    mcp_url: str
+    machine_mcp_url: str
 
-    llm_providers: str = "openai,anthropic,huggingface"
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
-    anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-4-20250514"
-    huggingface_api_key: str = ""
-    # Must be a model that has Inference Providers on the Hub (check model card).
-    huggingface_model: str = "mistralai/Mistral-7B-Instruct-v0.2"
-    # Optional pin, e.g. together | fireworks-ai | sambanova | hf-inference | groq
-    huggingface_provider: str = ""
+    llm_providers: str
+    openai_api_key: str
+    openai_model: str
+    anthropic_api_key: str
+    anthropic_model: str
+    huggingface_api_key: str
+    huggingface_model: str
+    huggingface_provider: str
 
-    # LM Studio default: http://127.0.0.1:1234/v1 — Ollama often :11434/v1
-    local_base_url: str = "http://localhost:1234/v1"
-    local_api_key: str = "local"
-    local_model: str = "qwen2.5-7b-instruct-1m"
+    local_base_url: str
+    local_api_key: str
+    local_model: str
+
+    langsmith_tracing: bool
+    langsmith_api_key: str
+    langsmith_project: str
+    langsmith_endpoint: str
 
     def provider_names(self) -> list[str]:
         return [p.strip().lower() for p in self.llm_providers.split(",") if p.strip()]

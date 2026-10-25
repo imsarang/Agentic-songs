@@ -5,12 +5,14 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
+from langsmith import trace
 
 from shanks_agent.graph.nodes.agent import make_agent_node, seed_messages
 from shanks_agent.graph.nodes.tools import TOOL_NAMES, build_tool_nodes
 from shanks_agent.graph.prompts import resolve_domain
 from shanks_agent.graph.state import AgentState
 from shanks_agent.llm.failover import FailoverLLM, build_failover_llm
+from shanks_agent.observability import new_run_id
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,7 @@ async def run_turn(
     user_text: str,
     *,
     thread_id: str = "default",
+    run_id: str | None = None,
     domain: str | None = None,
     graph=None,
 ) -> AsyncIterator[dict[str, Any]]:
@@ -73,48 +76,72 @@ async def run_turn(
     """
     graph = graph or get_graph()
     llm = _LLM or build_failover_llm()
-    resolved = await resolve_domain(llm, user_text, domain)
-    logger.info(
-        "turn start thread_id=%s domain=%s text=%s",
-        thread_id,
-        resolved,
-        user_text[:200],
-    )
+    run_uuid = new_run_id(run_id)
+    run_key = str(run_uuid)
 
-    saw_assistant = False
-    last_values: dict[str, Any] | None = None
-    n = 0
-    async for mode, data in graph.astream(
-        {
-            "messages": seed_messages(user_text),
-            "domain": resolved,
-            "next_tool": None,
-            "tool_args": {},
-        },
-        config={
-            "configurable": {"thread_id": thread_id},
-            "tags": ["shanks", "agent", resolved],
-            "metadata": {"thread_id": thread_id, "domain": resolved},
-        },
-        stream_mode=["custom", "values"],
-    ):
-        if mode == "values" and isinstance(data, dict):
-            last_values = data
-            continue
-        if mode != "custom" or not isinstance(data, dict):
-            continue
-        if data.get("type") == "assistant_message":
-            saw_assistant = True
+    async with trace(
+        "shanks-turn",
+        run_type="chain",
+        run_id=run_uuid,
+        inputs={"text": user_text, "thread_id": thread_id},
+        tags=["shanks"],
+        metadata={"thread_id": thread_id, "run_id": run_key},
+    ) as ls_run:
+        yield {"type": "run", "run_id": run_key, "thread_id": thread_id}
+        resolved = await resolve_domain(llm, user_text, domain)
+        ls_run.metadata["domain"] = resolved
+        logger.info(
+            "turn start run_id=%s thread_id=%s domain=%s text=%s",
+            run_key,
+            thread_id,
+            resolved,
+            user_text[:200],
+        )
+
+        saw_assistant = False
+        last_values: dict[str, Any] | None = None
+        n = 0
+        async for mode, data in graph.astream(
+            {
+                "messages": seed_messages(user_text),
+                "domain": resolved,
+                "next_tool": None,
+                "tool_args": {},
+            },
+            config={
+                "configurable": {"thread_id": thread_id},
+                "tags": ["shanks", "agent", resolved],
+                "metadata": {
+                    "thread_id": thread_id,
+                    "run_id": run_key,
+                    "domain": resolved,
+                },
+            },
+            stream_mode=["custom", "values"],
+        ):
+            if mode == "values" and isinstance(data, dict):
+                last_values = data
+                continue
+            if mode != "custom" or not isinstance(data, dict):
+                continue
+            if data.get("type") == "assistant_message":
+                saw_assistant = True
+            n += 1
+            logger.info("stream event run_id=%s type=%s", run_key, data.get("type"))
+            yield data
+
+        if not saw_assistant and last_values is not None:
+            for msg in reversed(last_values.get("messages") or []):
+                if getattr(msg, "type", None) == "ai":
+                    n += 1
+                    yield {"type": "assistant_message", "text": str(msg.content)}
+                    break
         n += 1
-        logger.info("stream event type=%s", data.get("type"))
-        yield data
-
-    if not saw_assistant and last_values is not None:
-        for msg in reversed(last_values.get("messages") or []):
-            if getattr(msg, "type", None) == "ai":
-                n += 1
-                yield {"type": "assistant_message", "text": str(msg.content)}
-                break
-    n += 1
-    yield {"type": "turn_done"}
-    logger.info("turn done thread_id=%s events=%d", thread_id, n)
+        yield {"type": "turn_done", "run_id": run_key}
+        ls_run.end(outputs={"events": n, "domain": resolved})
+        logger.info(
+            "turn done run_id=%s thread_id=%s events=%d",
+            run_key,
+            thread_id,
+            n,
+        )

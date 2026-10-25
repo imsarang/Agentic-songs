@@ -1,9 +1,38 @@
+# secrets
 mcp/.env
-mcp/bin/
-mcp/data/
 agent/.env
 ui/.env
 mcp/machine.env
-.venv/
-**/.venv/
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+# local builds and data
+mcp/bin/
+mcp/data/
 agent/shanks-agent
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+**/.venv/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# editor and OS
+.DS_Store
+*.log

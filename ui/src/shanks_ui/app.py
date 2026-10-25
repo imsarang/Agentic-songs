@@ -30,6 +30,10 @@ def _print_event(event: dict) -> None:
         console.print(Panel(text, title="assistant", border_style="green"))
     elif kind == "error":
         console.print(f"[red]error:[/] {escape(str(event.get('message') or ''))}")
+    elif kind == "run":
+        console.print(
+            f"[dim]run {event.get('run_id')}  thread {event.get('thread_id')}[/]"
+        )
     elif kind == "turn_done":
         console.print("[dim]— turn done —[/]\n")
     else:
@@ -61,11 +65,13 @@ async def run_repl() -> None:
             continue
         if text in {":q", "quit", "exit"}:
             break
+        run_id = str(uuid.uuid4())
         try:
             async for event in stream_turn(
                 settings.agent_turn_url,
                 text,
                 thread_id=thread_id,
+                run_id=run_id,
             ):
                 _print_event(event)
                 if event.get("type") == "turn_done":
