@@ -1,9 +1,30 @@
 services:
   redis:
-    image: redis:7-alpine
+    image: redis/redis-stack-server:7.4.0-v3
     # :6380 on host so ./host/run.sh can write wire features (host :6379 often taken)
     ports:
       - "6380:6379"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_INSTALL_PLUGINS: redis-datasource
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
     restart: unless-stopped
 
   # Web API MCP — playback targets host desktop Spotify (Connect device).
@@ -40,6 +61,7 @@ services:
       - "8001:8001"
     depends_on:
       - spotify
+      - grafana
     restart: unless-stopped
 
   # Terminal REPL — interactive only: docker compose run --rm ui

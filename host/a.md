@@ -64,15 +64,14 @@ That is the long-running “daemon.” No extra logic.
 
 3. **Publish** (`publish.py`)
    - `SET analyst:wire:latest` → JSON `{ ts, features, device }` (latest snapshot for the analyst).
-   - `XADD analyst:live:global` → stream fields for a short live history (maxlen ~500).
+   - `TS.ADD live:<metric>` → RedisTimeSeries for Grafana (`series.py`).
 
 ---
 
 ## Redis contract (what the analyst expects)
 
-- **Key** `analyst:wire:latest` (string JSON) — newest feature blob.
-- **Stream** `analyst:live:global` — recent `(ts, loudness_db, energy, silence)` entries.
-- Defaults match `WIRE_KEY` / `LIVE_KEY` in `publish.py` and the analyst’s wire reader.
+- **Key** `analyst:wire:latest` (string JSON) — newest feature blob. This is what the analyst reads.
+- **Time series** `live:loudness_db`, `live:peak_db`, `live:bass`, `live:mid`, `live:high`, `live:energy`, `live:brightness`, `live:crest`, `live:beat_hits`, `live:vibe`, `live:tempo_bpm`, `live:mood_code` — Grafana.
 
 Redis itself does **not** store PCM or waveforms—only the feature numbers.
 
@@ -106,8 +105,8 @@ Host tools needed: `pw-record`, `wpctl` (PipeWire), and Redis reachable on the U
 |-----|---------|---------|
 | `REDIS_URL` | `redis://127.0.0.1:6380/0` | Where to write |
 | `WIRE_KEY` | `analyst:wire:latest` | Latest JSON key |
-| `LIVE_KEY` | `analyst:live:global` | Live stream name |
-| `WINDOW_MS` | `5000` | Capture window length |
+| `HITS_KEY` | `analyst:live:hits` | Recent beat times for tempo |
+| `WINDOW_MS` | `1000` | Capture window length |
 | `SAMPLE_RATE` | `44100` | `pw-record` rate |
 | `AUDIO_TARGET` | (auto via `wpctl`) | Force a sink id/name |
 

@@ -1,0 +1,93 @@
+{
+  "uid": "shanks-live",
+  "title": "Shanks live",
+  "schemaVersion": 39,
+  "refresh": "5s",
+  "timezone": "browser",
+  "time": {"from": "now-15m", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Level",
+      "description": "loudness_db is the average level of that second, in dB below full scale (0 is as loud as digital audio gets). peak_db is the loudest instant in the same second. Below about \u221250 dB the slice is treated as silence.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 0, "y": 0, "w": 24, "h": 8},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.mrange", "filter": "group=level"}],
+      "fieldConfig": {"defaults": {"displayName": "${__field.labels.name}", "unit": "dB", "min": -60, "max": 0}, "overrides": []}
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Bands",
+      "description": "How much of the sound\u2019s power sits in each range. bass is 20\u2013150 Hz, mid is 150\u20132000 Hz, high is 2000\u20138000 Hz. The three shares sit on a 0\u20131 scale.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 0, "y": 8, "w": 10, "h": 8},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.mrange", "filter": "group=bands"}],
+      "fieldConfig": {"defaults": {"displayName": "${__field.labels.name}", "min": 0, "max": 1}, "overrides": []}
+    },
+    {
+      "id": 3,
+      "type": "gauge",
+      "title": "Vibe",
+      "description": "Half energy and half brightness, from 0 to 1. 0 means silence. About 0.2 and under is chill; about 0.55 and up is hype.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 18, "y": 8, "w": 6, "h": 8},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.get", "keyName": "live:vibe"}],
+      "fieldConfig": {"defaults": {"min": 0, "max": 1}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Energy and brightness",
+      "description": "energy is how strong the slice is, from 0 to 1. brightness is how far the tone leans toward the highs, from 0 to 1.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 10, "y": 8, "w": 8, "h": 8},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.mrange", "filter": "group=tone"}],
+      "fieldConfig": {"defaults": {"displayName": "${__field.labels.name}", "min": 0, "max": 1}, "overrides": []}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Crest",
+      "description": "Peak divided by the average level. A higher crest means that second has sharper hits instead of a flat, even loudness.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 7},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.mrange", "filter": "group=crest"}],
+      "fieldConfig": {"defaults": {"displayName": "${__field.labels.name}", "min": 0, "max": 12}, "overrides": []}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Beat hits",
+      "description": "How many times the level jumped in that second. A hit is a 50 ms frame that rises by about 1.6\u00d7 and clears a small level floor.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 7},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.mrange", "filter": "group=hits"}],
+      "fieldConfig": {"defaults": {"displayName": "${__field.labels.name}", "min": 0, "max": 8, "custom": {"drawStyle": "bars", "fillOpacity": 40}}, "overrides": []}
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Tempo",
+      "description": "Beats per minute, from the gaps between recent hits over about the last 15 seconds. The number stays until a new tempo is found.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 0, "y": 23, "w": 12, "h": 4},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.get", "keyName": "live:tempo_bpm"}],
+      "fieldConfig": {"defaults": {"decimals": 0, "unit": "BPM"}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"}
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Mood",
+      "description": "silence, chill, mid, or hype, taken from vibe for that second.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 12, "y": 23, "w": 12, "h": 4},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.get", "keyName": "live:mood_code"}],
+      "fieldConfig": {"defaults": {"decimals": 0, "mappings": [{"type": "value", "options": {"0": {"text": "silence"}, "1": {"text": "chill"}, "2": {"text": "mid"}, "3": {"text": "hype"}}}]}, "overrides": []},
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "none"}
+    }
+  ]
+}

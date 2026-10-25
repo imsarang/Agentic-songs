@@ -89,7 +89,10 @@ async def run_turn(
     ) as ls_run:
         yield {"type": "run", "run_id": run_key, "thread_id": thread_id}
         resolved = await resolve_domain(llm, user_text, domain)
-        ls_run.metadata["domain"] = resolved
+        # Charts group by run name. One shared name draws one line.
+        ls_run.name = f"shanks-{resolved}"
+        ls_run.add_metadata({"domain": resolved})
+        ls_run.add_tags([resolved])
         logger.info(
             "turn start run_id=%s thread_id=%s domain=%s text=%s",
             run_key,
