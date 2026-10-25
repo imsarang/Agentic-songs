@@ -9,6 +9,7 @@ from rich.panel import Panel
 
 from shanks_ui.config import get_settings
 from shanks_ui.transport import stream_turn
+from shanks_ui.voice import PushToTalk
 
 console = Console()
 
@@ -48,33 +49,54 @@ async def run_repl() -> None:
         Panel(
             f"agent: {settings.agent_turn_url}\n"
             f"thread: {thread_id}\n"
+            "hold Left Ctrl to talk, or type a line\n"
             "quit with :q / exit / Ctrl-C",
             title="shanks-ui",
             border_style="blue",
         )
     )
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+    talk = PushToTalk(
+        loop,
+        queue,
+        lambda msg: console.print(f"[yellow]{escape(msg)}[/]") if msg else None,
+    )
+    if err := talk.start():
+        console.print(f"[red]{escape(err)}[/]")
+    stdin_task = asyncio.create_task(_stdin(queue))
+    try:
+        while True:
+            item = await queue.get()
+            if item is None:
+                break
+            text = item.strip()
+            if not text:
+                continue
+            if text in {":q", "quit", "exit"}:
+                break
+            console.print(f"[bold]> [/]{escape(text)}")
+            await _one_turn(settings.agent_turn_url, text, thread_id)
+    finally:
+        talk.stop()
+        stdin_task.cancel()
 
+
+async def _stdin(queue: asyncio.Queue[str | None]) -> None:
     while True:
         try:
             line = await asyncio.to_thread(console.input, "[bold]> [/]")
         except (EOFError, KeyboardInterrupt):
-            console.print()
-            break
-        text = line.strip()
-        if not text:
-            continue
-        if text in {":q", "quit", "exit"}:
-            break
-        run_id = str(uuid.uuid4())
-        try:
-            async for event in stream_turn(
-                settings.agent_turn_url,
-                text,
-                thread_id=thread_id,
-                run_id=run_id,
-            ):
-                _print_event(event)
-                if event.get("type") == "turn_done":
-                    break
-        except Exception as exc:  # noqa: BLE001
-            console.print(f"[red]transport:[/] {escape(str(exc))}")
+            queue.put_nowait(None)
+            return
+        queue.put_nowait(line)
+
+
+async def _one_turn(url: str, text: str, thread_id: str) -> None:
+    try:
+        async for event in stream_turn(url, text, thread_id=thread_id, run_id=str(uuid.uuid4())):
+            _print_event(event)
+            if event.get("type") == "turn_done":
+                break
+    except Exception as exc:  # noqa: BLE001
+        console.print(f"[red]transport:[/] {escape(str(exc))}")
