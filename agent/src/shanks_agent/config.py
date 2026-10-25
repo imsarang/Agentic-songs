@@ -16,7 +16,8 @@ class Settings(BaseSettings):
 
     agent_host: str = "0.0.0.0"
     agent_port: int = 8000
-    mcp_url: str = "http://127.0.0.1:8080/mcp"
+    mcp_url: str = "http://127.0.0.1:8080/mcp"  # spotify MCP
+    machine_mcp_url: str = "http://127.0.0.1:8092/mcp"
 
     llm_providers: str = "openai,anthropic,huggingface"
     openai_api_key: str = ""

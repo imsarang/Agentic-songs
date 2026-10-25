@@ -6,12 +6,14 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage
 
+from shanks_agent.config import get_settings
+from shanks_agent.graph.emit import emit
 from shanks_agent.graph.state import AgentState
 from shanks_agent.mcp.session import MCPSession
 
 logger = logging.getLogger(__name__)
 
-TOOL_NAMES: tuple[str, ...] = (
+SPOTIFY_TOOLS: tuple[str, ...] = (
     "spotify_search",
     "spotify_play",
     "spotify_control",
@@ -19,14 +21,35 @@ TOOL_NAMES: tuple[str, ...] = (
     "spotify_playlist",
 )
 
+MACHINE_TOOLS: tuple[str, ...] = (
+    "machine_spec",
+    "machine_capacity",
+    "machine_processes",
+    "machine_cgroups",
+    "machine_namespaces",
+    "machine_net",
+    "machine_blockers",
+    "machine_limits",
+    "machine_power",
+    "machine_gpu",
+    "machine_logs",
+    "machine_health",
+)
+
+DOMAIN_TOOLS: dict[str, tuple[str, ...]] = {
+    "spotify": SPOTIFY_TOOLS,
+    "machine": MACHINE_TOOLS,
+}
+
+TOOL_NAMES: tuple[str, ...] = SPOTIFY_TOOLS + MACHINE_TOOLS
+
 ToolNode = Callable[[AgentState], Awaitable[dict[str, Any]]]
 
 
 def make_tool_node(tool_name: str, mcp: MCPSession) -> ToolNode:
     async def _node(state: AgentState) -> dict[str, Any]:
         args = dict(state.get("tool_args") or {})
-        sink = list(state.get("event_sink") or [])
-        sink.append({"type": "tool_start", "name": tool_name, "args": args})
+        emit({"type": "tool_start", "name": tool_name, "args": args})
         logger.info("node=tool_%s start args=%s", tool_name, args)
         try:
             preview = await mcp.call_tool(tool_name, args)
@@ -36,19 +59,29 @@ def make_tool_node(tool_name: str, mcp: MCPSession) -> ToolNode:
             preview = str(exc)
             ok = False
             logger.exception("node=tool_%s failed: %s", tool_name, exc)
-        sink.append(
+        emit(
             {"type": "tool_end", "name": tool_name, "ok": ok, "preview": preview[:800]}
         )
         return {
             "messages": [HumanMessage(content=f"[tool {tool_name} result]\n{preview}")],
             "next_tool": None,
             "tool_args": {},
-            "event_sink": sink,
         }
 
     _node.__name__ = f"tool_{tool_name}"
     return _node
 
 
-def build_tool_nodes(mcp: MCPSession) -> dict[str, ToolNode]:
-    return {f"tool_{name}": make_tool_node(name, mcp) for name in TOOL_NAMES}
+def build_tool_nodes(
+    spotify_mcp: MCPSession | None = None,
+    machine_mcp: MCPSession | None = None,
+) -> dict[str, ToolNode]:
+    settings = get_settings()
+    spotify_mcp = spotify_mcp or MCPSession(settings.mcp_url)
+    machine_mcp = machine_mcp or MCPSession(settings.machine_mcp_url)
+    nodes: dict[str, ToolNode] = {}
+    for name in SPOTIFY_TOOLS:
+        nodes[f"tool_{name}"] = make_tool_node(name, spotify_mcp)
+    for name in MACHINE_TOOLS:
+        nodes[f"tool_{name}"] = make_tool_node(name, machine_mcp)
+    return nodes

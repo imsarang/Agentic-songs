@@ -15,7 +15,7 @@ func Register(s *server.MCPServer) {
 	), capacityHandler())
 
 	s.AddTool(mcp.NewTool("machine_processes",
-		mcp.WithDescription("Read process state counts, zombies, disk-sleep tasks, kernel-thread count, and the top processes by CPU and RSS. Returns one JSON object."),
+		mcp.WithDescription("Read process state counts, zombies, disk-sleep tasks, kernel-thread count, and the top processes by CPU, RSS, and elapsed run time (etime_sec). Returns one JSON object."),
 	), processesHandler())
 
 	s.AddTool(mcp.NewTool("machine_cgroups",

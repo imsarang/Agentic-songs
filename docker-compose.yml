@@ -30,6 +30,8 @@ services:
       AGENT_HOST: "0.0.0.0"
       AGENT_PORT: "8001"
       MCP_URL: http://spotify:8080/mcp
+      # Machine MCP usually runs on the host (:8092), not in compose yet
+      MACHINE_MCP_URL: http://host.docker.internal:8092/mcp
       # Reach LM Studio / Ollama on the host (overrides 127.0.0.1 from .env)
       LOCAL_BASE_URL: http://host.docker.internal:1234/v1
     extra_hosts:

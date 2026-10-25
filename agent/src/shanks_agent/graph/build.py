@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 
 from shanks_agent.graph.nodes.agent import make_agent_node, seed_messages
 from shanks_agent.graph.nodes.tools import TOOL_NAMES, build_tool_nodes
+from shanks_agent.graph.prompts import resolve_domain
 from shanks_agent.graph.state import AgentState
 from shanks_agent.llm.failover import FailoverLLM, build_failover_llm
-from shanks_agent.mcp.session import MCPSession
 
 logger = logging.getLogger(__name__)
 
 _GRAPH = None
+_LLM: FailoverLLM | None = None
 
 
 def _route(state: AgentState) -> str:
@@ -27,20 +29,17 @@ def _route(state: AgentState) -> str:
 
 
 def get_graph():
-    global _GRAPH
+    global _GRAPH, _LLM
     if _GRAPH is None:
         logger.info("compiling graph (once)")
-        _GRAPH = build_graph()
+        _LLM = build_failover_llm()
+        _GRAPH = build_graph(_LLM)
     return _GRAPH
 
 
-def build_graph(
-    llm: FailoverLLM | None = None,
-    mcp: MCPSession | None = None,
-):
+def build_graph(llm: FailoverLLM | None = None):
     llm = llm or build_failover_llm()
-    mcp = mcp or MCPSession()
-    tool_nodes = build_tool_nodes(mcp)
+    tool_nodes = build_tool_nodes()
 
     g: StateGraph = StateGraph(AgentState)
     g.add_node("agent", make_agent_node(llm))
@@ -63,31 +62,59 @@ async def run_turn(
     user_text: str,
     *,
     thread_id: str = "default",
+    domain: str | None = None,
     graph=None,
-) -> list[dict[str, Any]]:
-    graph = graph or get_graph()
-    logger.info("turn start thread_id=%s text=%s", thread_id, user_text[:200])
+) -> AsyncIterator[dict[str, Any]]:
+    """Yield UI events as each graph node emits them.
 
-    result = await graph.ainvoke(
+    Nodes call ``emit()`` during execution. ``stream_mode="custom"`` delivers
+    those payloads while the node is still running, instead of waiting for
+    ``ainvoke`` to finish and dumping a collected list.
+    """
+    graph = graph or get_graph()
+    llm = _LLM or build_failover_llm()
+    resolved = await resolve_domain(llm, user_text, domain)
+    logger.info(
+        "turn start thread_id=%s domain=%s text=%s",
+        thread_id,
+        resolved,
+        user_text[:200],
+    )
+
+    saw_assistant = False
+    last_values: dict[str, Any] | None = None
+    n = 0
+    async for mode, data in graph.astream(
         {
             "messages": seed_messages(user_text),
+            "domain": resolved,
             "next_tool": None,
             "tool_args": {},
-            "event_sink": [],
         },
         config={
             "configurable": {"thread_id": thread_id},
-            "tags": ["shanks", "agent"],
-            "metadata": {"thread_id": thread_id},
+            "tags": ["shanks", "agent", resolved],
+            "metadata": {"thread_id": thread_id, "domain": resolved},
         },
-    )
+        stream_mode=["custom", "values"],
+    ):
+        if mode == "values" and isinstance(data, dict):
+            last_values = data
+            continue
+        if mode != "custom" or not isinstance(data, dict):
+            continue
+        if data.get("type") == "assistant_message":
+            saw_assistant = True
+        n += 1
+        logger.info("stream event type=%s", data.get("type"))
+        yield data
 
-    events = list(result.get("event_sink") or [])
-    if not any(e.get("type") == "assistant_message" for e in events):
-        for msg in reversed(result.get("messages") or []):
+    if not saw_assistant and last_values is not None:
+        for msg in reversed(last_values.get("messages") or []):
             if getattr(msg, "type", None) == "ai":
-                events.append({"type": "assistant_message", "text": str(msg.content)})
+                n += 1
+                yield {"type": "assistant_message", "text": str(msg.content)}
                 break
-    events.append({"type": "turn_done"})
-    logger.info("turn done thread_id=%s events=%d", thread_id, len(events))
-    return events
+    n += 1
+    yield {"type": "turn_done"}
+    logger.info("turn done thread_id=%s events=%d", thread_id, n)

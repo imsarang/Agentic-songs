@@ -20,6 +20,7 @@ type Processes struct {
 	KernelThreads int         `json:"kernel_threads"`
 	TopCPU        []ProcUse   `json:"top_cpu"`
 	TopRSS        []ProcUse   `json:"top_rss"`
+	TopEtime      []ProcUse   `json:"top_etime"`
 }
 
 type StateCounts struct {
@@ -43,4 +44,5 @@ type ProcUse struct {
 	Command    string  `json:"command"`
 	CPUPercent float64 `json:"cpu_percent"`
 	RSSBytes   uint64  `json:"rss_bytes"`
+	EtimeSec   int64   `json:"etime_sec"`
 }

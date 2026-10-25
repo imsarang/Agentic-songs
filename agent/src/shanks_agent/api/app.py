@@ -30,7 +30,11 @@ def _sse(data: dict) -> str:
 async def turn(body: TurnRequest) -> StreamingResponse:
     async def events():
         try:
-            for event in await run_turn(body.text, thread_id=body.thread_id):
+            async for event in run_turn(
+                body.text,
+                thread_id=body.thread_id,
+                domain=body.domain,
+            ):
                 yield _sse(event)
         except Exception as exc:  # noqa: BLE001
             yield _sse({"type": "error", "message": format_mcp_error(exc)})

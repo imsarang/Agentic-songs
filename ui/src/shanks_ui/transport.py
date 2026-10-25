@@ -23,15 +23,10 @@ async def stream_turn(
             headers={"Accept": "text/event-stream"},
         ) as resp:
             resp.raise_for_status()
-            buf = ""
-            async for chunk in resp.aiter_text():
-                buf += chunk
-                while "\n\n" in buf:
-                    block, buf = buf.split("\n\n", 1)
-                    for line in block.splitlines():
-                        if not line.startswith("data:"):
-                            continue
-                        raw = line[5:].strip()
-                        if not raw:
-                            continue
-                        yield json.loads(raw)
+            async for line in resp.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                raw = line[5:].strip()
+                if not raw:
+                    continue
+                yield json.loads(raw)

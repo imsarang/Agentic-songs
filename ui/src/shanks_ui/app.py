@@ -34,6 +34,7 @@ def _print_event(event: dict) -> None:
         console.print("[dim]— turn done —[/]\n")
     else:
         console.print(f"[dim]{escape(str(event))}[/]")
+    console.file.flush()
 
 
 async def run_repl() -> None:
