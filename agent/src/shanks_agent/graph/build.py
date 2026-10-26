@@ -4,9 +4,11 @@ import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
+from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 from langsmith import trace
 
+import shanks_agent.memory as memory
 from shanks_agent.graph.nodes.agent import make_agent_node, seed_messages
 from shanks_agent.graph.nodes.tools import TOOL_NAMES, build_tool_nodes
 from shanks_agent.graph.prompts import resolve_domain
@@ -79,6 +81,9 @@ async def run_turn(
     run_uuid = new_run_id(run_id)
     run_key = str(run_uuid)
 
+    rows = await memory.load(thread_id)
+    hint = memory.prompt(rows)
+
     async with trace(
         "shanks-turn",
         run_type="chain",
@@ -88,7 +93,8 @@ async def run_turn(
         metadata={"thread_id": thread_id, "run_id": run_key},
     ) as ls_run:
         yield {"type": "run", "run_id": run_key, "thread_id": thread_id}
-        resolved = await resolve_domain(llm, user_text, domain)
+        resolved = domain or memory.domain_of(rows, user_text)
+        resolved = await resolve_domain(llm, user_text, resolved, hint)
         # Charts group by run name. One shared name draws one line.
         ls_run.name = f"shanks-{resolved}"
         ls_run.add_metadata({"domain": resolved})
@@ -105,9 +111,12 @@ async def run_turn(
         saw_assistant = False
         last_values: dict[str, Any] | None = None
         n = 0
+        messages = seed_messages(user_text)
+        if hint:
+            messages = [HumanMessage(content="Recent turns:\n" + hint), *messages]
         async for mode, data in graph.astream(
             {
-                "messages": seed_messages(user_text),
+                "messages": messages,
                 "domain": resolved,
                 "next_tool": None,
                 "tool_args": {},
@@ -140,6 +149,12 @@ async def run_turn(
                     n += 1
                     yield {"type": "assistant_message", "text": str(msg.content)}
                     break
+        await memory.save(
+            thread_id,
+            resolved,
+            user_text,
+            memory.note_from((last_values or {}).get("messages")),
+        )
         n += 1
         yield {"type": "turn_done", "run_id": run_key}
         ls_run.end(outputs={"events": n, "domain": resolved})

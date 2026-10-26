@@ -1,4 +1,4 @@
-"""Hold Left Ctrl, record the mic, transcribe with whisper-cli."""
+"""Hold Num Lock, record the mic, transcribe with whisper-cli."""
 
 import os
 import re
@@ -10,7 +10,7 @@ import threading
 import time
 from pathlib import Path
 
-KEY_LEFTCTRL = 29
+KEY_NUMLOCK = 69
 EV_KEY = 1
 MIN_HOLD_S = 0.35
 _BLANK = {"[BLANK_AUDIO]", "(silence)"}
@@ -99,10 +99,10 @@ class PushToTalk:
                         self._on_key(event.code, event.value)
 
     def _on_key(self, code: int, value: int) -> None:
-        if code == KEY_LEFTCTRL and value == 1 and not self._ctrl:
+        if code == KEY_NUMLOCK and value == 1 and not self._ctrl:
             self._ctrl, self._other = True, False
             self._begin()
-        elif code == KEY_LEFTCTRL and value == 0 and self._ctrl:
+        elif code == KEY_NUMLOCK and value == 0 and self._ctrl:
             self._ctrl = False
             self._end()
         elif self._ctrl and value == 1:
@@ -133,6 +133,7 @@ class PushToTalk:
                 return
             text = transcribe(path)
             if text:
+                self.on_status(text)
                 self.loop.call_soon_threadsafe(self.queue.put_nowait, text)
             else:
                 self.on_status("heard nothing")
@@ -167,6 +168,6 @@ def _keyboards():
             dev = InputDevice(path)
         except OSError:
             continue
-        if ecodes.KEY_LEFTCTRL in dev.capabilities().get(ecodes.EV_KEY, []):
+        if ecodes.KEY_NUMLOCK in dev.capabilities().get(ecodes.EV_KEY, []):
             found.append(dev)
     return found

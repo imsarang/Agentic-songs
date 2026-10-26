@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     agent_port: int
     mcp_url: str
     machine_mcp_url: str
+    google_mcp_url: str = "http://127.0.0.1:8004/mcp"
 
     llm_providers: str
     openai_api_key: str

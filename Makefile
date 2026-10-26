@@ -5,7 +5,7 @@ SPOTIFY_BIN ?= /snap/bin/spotify
 export SHANKS_SPOTIFY_DIR ?= $(HOME)/.config/shanks
 DASH_URL := http://127.0.0.1:3000/d/shanks-live/shanks-live?orgId=1&from=now-15m&to=now&timezone=browser&refresh=5s
 
-.PHONY: up down
+.PHONY: up down boot
 
 up:
 	mkdir -p -m 700 $(SHANKS_SPOTIFY_DIR)
@@ -25,3 +25,7 @@ down:
 	-systemctl --user stop $(UNIT)
 	-docker compose -f $(ROOT)docker-compose.yml exec -T redis redis-cli FLUSHALL*
 	docker compose -f $(ROOT)docker-compose.yml down
+
+boot:
+	docker compose -f $(ROOT)docker-compose.yml build
+	$(MAKE) up

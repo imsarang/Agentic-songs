@@ -6,16 +6,18 @@ import re
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from shanks_agent.graph.prompts.base import BASE
+from shanks_agent.graph.prompts.google import GOOGLE
 from shanks_agent.graph.prompts.machine import MACHINE
 from shanks_agent.graph.prompts.router import ROUTER
 from shanks_agent.graph.prompts.spotify import SPOTIFY
 from shanks_agent.llm.failover import FailoverLLM
 
-DOMAINS = ("spotify", "machine")
+DOMAINS = ("spotify", "machine", "google")
 
 _DOMAIN_PROMPTS = {
     "spotify": SPOTIFY,
     "machine": MACHINE,
+    "google": GOOGLE,
 }
 
 
@@ -42,12 +44,15 @@ async def resolve_domain(
     llm: FailoverLLM,
     text: str,
     domain: str | None = None,
+    hint: str = "",
 ) -> str:
     if domain in DOMAINS:
         return domain
-    ai = await llm.acomplete(
-        [SystemMessage(content=ROUTER), HumanMessage(content=text)]
-    )
+    messages = [SystemMessage(content=ROUTER)]
+    if hint:
+        messages.append(HumanMessage(content="Recent turns:\n" + hint))
+    messages.append(HumanMessage(content=text))
+    ai = await llm.acomplete(messages)
     if isinstance(ai.content, list):
         raw = "".join(
             b.get("text", "")

@@ -43,6 +43,27 @@ services:
       - "8080:8080"
       - "4381:4381"
 
+  # Gmail, contacts, and Drive quota. Tokens share the Spotify data dir.
+  google:
+    build:
+      context: ./mcp
+      args:
+        BIN: google
+    env_file: ./mcp/.env
+    environment:
+      GOOGLE_DATA_DIR: /data
+      MCP_TRANSPORT: http
+      MCP_ADDR: ":8080"
+      GOOGLE_IN_DOCKER: "1"
+      GOOGLE_OPEN_URL: http://host.docker.internal:4390/open
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${SHANKS_SPOTIFY_DIR:-${HOME}/.config/shanks}:/data
+    ports:
+      - "8004:8080"
+      - "4382:4382"
+
   # ReAct agent — talks to spotify MCP; LLM may be host LM Studio via host.docker.internal
   agent:
     build: ./agent
@@ -53,6 +74,8 @@ services:
       MCP_URL: http://spotify:8080/mcp
       # Machine MCP usually runs on the host (:8092), not in compose yet
       MACHINE_MCP_URL: http://host.docker.internal:8092/mcp
+      GOOGLE_MCP_URL: http://google:8080/mcp
+      REDIS_URL: redis://redis:6379/0
       # Reach LM Studio / Ollama on the host (overrides 127.0.0.1 from .env)
       LOCAL_BASE_URL: http://host.docker.internal:1234/v1
     extra_hosts:
@@ -61,7 +84,9 @@ services:
       - "8001:8001"
     depends_on:
       - spotify
+      - google
       - grafana
+      - redis
     restart: unless-stopped
 
   # Terminal REPL — interactive only: docker compose run --rm ui

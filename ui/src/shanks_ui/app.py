@@ -52,14 +52,15 @@ async def run_repl() -> None:
         Panel(
             f"agent: {settings.agent_turn_url}\n"
             f"thread: {thread_id}\n"
-            "hold Left Ctrl to talk, or type a line\n"
+            "hold Num Lock to talk, or type a line\n"
             "quit with :q / exit / Ctrl-C",
             title="shanks-ui",
             border_style="blue",
         )
     )
-    console.print("[yellow]loading voice…[/]")
-    await asyncio.to_thread(load)
+    if settings.speak_replies:
+        console.print("[yellow]loading voice…[/]")
+        await asyncio.to_thread(load)
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue[str | None] = asyncio.Queue()
     talk = PushToTalk(
@@ -80,8 +81,7 @@ async def run_repl() -> None:
                 continue
             if text in {":q", "quit", "exit"}:
                 break
-            console.print(f"[bold]> [/]{escape(text)}")
-            await _one_turn(settings.agent_turn_url, text, thread_id)
+            await _one_turn(settings.agent_turn_url, text, thread_id, settings.speak_replies)
     finally:
         talk.stop()
         stdin_task.cancel()
@@ -97,14 +97,14 @@ async def _stdin(queue: asyncio.Queue[str | None]) -> None:
         queue.put_nowait(line)
 
 
-async def _one_turn(url: str, text: str, thread_id: str) -> None:
+async def _one_turn(url: str, text: str, thread_id: str, speak_replies: bool) -> None:
     domain = ""
     try:
         async for event in stream_turn(url, text, thread_id=thread_id, run_id=str(uuid.uuid4())):
             _print_event(event)
             if event.get("type") == "domain":
                 domain = str(event.get("domain") or "")
-            if event.get("type") == "assistant_message" and domain == "machine":
+            if speak_replies and event.get("type") == "assistant_message" and domain == "machine":
                 console.print("[yellow]speaking…[/]")
                 try:
                     await asyncio.to_thread(speak, str(event.get("text") or ""))
