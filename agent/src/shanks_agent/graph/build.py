@@ -100,6 +100,7 @@ async def run_turn(
             resolved,
             user_text[:200],
         )
+        yield {"type": "domain", "domain": resolved}
 
         saw_assistant = False
         last_values: dict[str, Any] | None = None

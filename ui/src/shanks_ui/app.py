@@ -8,6 +8,7 @@ from rich.markup import escape
 from rich.panel import Panel
 
 from shanks_ui.config import get_settings
+from shanks_ui.speak import load, speak
 from shanks_ui.transport import stream_turn
 from shanks_ui.voice import PushToTalk
 
@@ -31,6 +32,8 @@ def _print_event(event: dict) -> None:
         console.print(Panel(text, title="assistant", border_style="green"))
     elif kind == "error":
         console.print(f"[red]error:[/] {escape(str(event.get('message') or ''))}")
+    elif kind == "domain":
+        console.print(f"[dim]domain {event.get('domain')}[/]")
     elif kind == "run":
         console.print(
             f"[dim]run {event.get('run_id')}  thread {event.get('thread_id')}[/]"
@@ -55,6 +58,8 @@ async def run_repl() -> None:
             border_style="blue",
         )
     )
+    console.print("[yellow]loading voice…[/]")
+    await asyncio.to_thread(load)
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue[str | None] = asyncio.Queue()
     talk = PushToTalk(
@@ -93,9 +98,18 @@ async def _stdin(queue: asyncio.Queue[str | None]) -> None:
 
 
 async def _one_turn(url: str, text: str, thread_id: str) -> None:
+    domain = ""
     try:
         async for event in stream_turn(url, text, thread_id=thread_id, run_id=str(uuid.uuid4())):
             _print_event(event)
+            if event.get("type") == "domain":
+                domain = str(event.get("domain") or "")
+            if event.get("type") == "assistant_message" and domain == "machine":
+                console.print("[yellow]speaking…[/]")
+                try:
+                    await asyncio.to_thread(speak, str(event.get("text") or ""))
+                except Exception as exc:  # noqa: BLE001
+                    console.print(f"[red]voice:[/] {escape(str(exc))}")
             if event.get("type") == "turn_done":
                 break
     except Exception as exc:  # noqa: BLE001
