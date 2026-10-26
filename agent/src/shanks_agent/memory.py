@@ -12,18 +12,30 @@ async def load(thread_id: str) -> list[dict]:
     raw = await r.lrange(_key(thread_id), -10, -1)
     return [json.loads(item) for item in raw]
 
+_FOLLOW = {
+    "yes", "y", "yeah", "yep", "ok", "okay", "sure",
+    "no", "send", "send it", "do it", "go ahead",
+    "delete", "delete it", "delete them", "all",
+}
+
 def domain_of(rows: list[dict], text: str) -> str | None:
-    if rows and len(text) < 40:
+    if not rows:
+        return None
+    cleaned = " ".join(text.lower().split()).strip(".!?")
+    if cleaned in _FOLLOW or _is_handle(cleaned):
         return rows[-1]["domain"]
     return None
 
+def _is_handle(text: str) -> bool:
+    if " " in text or len(text) < 2:
+        return False
+    return any(ch.isdigit() for ch in text)
+
 def prompt(rows: list[dict]) -> str:
-    if not rows: return ""
-    domain = rows[-1]["domain"]
-    same = [row for row in rows if row["domain"] == domain]
-    return "\n".join(
-        f"{row['domain']} | {row['user']} | {row.get('note', '')}" for row in same
-    )
+    if not rows:
+        return ""
+    row = rows[-1]
+    return f"{row['domain']} | {row['user']} | {row.get('note', '')}"
 
 def note_from(messages) -> str:
     note = ""

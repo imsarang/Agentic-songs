@@ -82,7 +82,8 @@ async def run_turn(
     run_key = str(run_uuid)
 
     rows = await memory.load(thread_id)
-    hint = memory.prompt(rows)
+    follow = memory.domain_of(rows, user_text)
+    hint = memory.prompt(rows) if follow else ""
 
     async with trace(
         "shanks-turn",
@@ -93,7 +94,7 @@ async def run_turn(
         metadata={"thread_id": thread_id, "run_id": run_key},
     ) as ls_run:
         yield {"type": "run", "run_id": run_key, "thread_id": thread_id}
-        resolved = domain or memory.domain_of(rows, user_text)
+        resolved = domain or follow
         resolved = await resolve_domain(llm, user_text, resolved, hint)
         # Charts group by run name. One shared name draws one line.
         ls_run.name = f"shanks-{resolved}"
