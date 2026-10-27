@@ -71,7 +71,7 @@ def make_agent_node(llm: FailoverLLM):
 
         text = str(decision.get("text") or content)
         logger.info("node=agent finish text=%s", text[:200])
-        emit({"type": "assistant_message", "text": text})
+        emit({"type": "assistant_message", "subagent": domain, "text": text})
         return {
             "messages": [AIMessage(content=text)],
             "next_tool": None,

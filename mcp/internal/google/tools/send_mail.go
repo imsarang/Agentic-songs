@@ -13,7 +13,11 @@ func sendMailHandler(client google.Client) server.ToolHandlerFunc {
 		if err := client.EnsureAuth(ctx); err != nil {
 			return textOrErr("", err)
 		}
-		mail, err := client.SendMail(ctx, req.GetString("draft_id", ""))
+		mail, err := client.SendMail(ctx,
+			req.GetString("draft_id", ""),
+			req.GetString("to", ""),
+			req.GetString("name", ""),
+		)
 		if err != nil {
 			return textOrErr("", err)
 		}

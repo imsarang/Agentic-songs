@@ -20,20 +20,22 @@ func Register(s *server.MCPServer, client google.Client) {
 	), createSubjectHandler(client))
 
 	s.AddTool(mcp.NewTool("google_get_receiver",
-		mcp.WithDescription("Look up email addresses for a name in the user's contacts. Returns no contacts when nothing matches. Do not invent an address."),
+		mcp.WithDescription("Look up email addresses for a name. Use only from google_send_mail. Do not call this while creating a draft."),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Person name to search")),
 	), getReceiverHandler(client))
 
 	s.AddTool(mcp.NewTool("google_create_draft",
-		mcp.WithDescription("Create a Gmail draft. Does not send. Returns draft_id for google_send_mail."),
-		mcp.WithString("to", mcp.Required(), mcp.Description("Recipient email from google_get_receiver")),
+		mcp.WithDescription("Create a Gmail draft. Does not send and does not look up contacts. Returns draft_id for google_send_mail."),
+		mcp.WithString("to", mcp.Description("Recipient email, only when the user already wrote one. Omit to skip the address.")),
 		mcp.WithString("subject", mcp.Description("Subject. Uses the stored subject when empty.")),
 		mcp.WithString("body", mcp.Required(), mcp.Description("Plain-text body")),
 	), createDraftHandler(client))
 
 	s.AddTool(mcp.NewTool("google_send_mail",
-		mcp.WithDescription("Send an existing draft by draft_id. Call only after the user asks to send that draft."),
+		mcp.WithDescription("Send an existing draft. This is the only tool that looks up a contact. Pass name to search, or to when the address is already known."),
 		mcp.WithString("draft_id", mcp.Required(), mcp.Description("draft_id from google_create_draft")),
+		mcp.WithString("name", mcp.Description("Person to find in contacts. Omit when to is set.")),
+		mcp.WithString("to", mcp.Description("Recipient email. Skips the contact search.")),
 	), sendMailHandler(client))
 
 	searchTool := func(name, desc string, kind google.EmailType) {

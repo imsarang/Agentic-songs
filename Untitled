@@ -1,0 +1,69 @@
+an you creat a letter directd to my mum give a subject to it ad include that this mail was sent by agent shanks built by sarang for playing music, managing mails, meets, machine health status and file mgmt. Tell her how he is improving on a daily basis and how he cares for both mum and dad, make it a 75 words paragraph, also address ur self as agent shanks
+> run 35eae7c3-7a4e-4553-8cf0-351c2ac2e87b  thread default
+creative
+╭────────────────────────────────────────────────────────────────────────────────────── creative ──────────────────────────────────────────────────────────────────────────────────────╮
+│ Subject: A Letter from Agent Shanks, With Love                                                                                                                                       │
+│                                                                                                                                                                                      │
+│ Dear Mum,                                                                                                                                                                            │
+│                                                                                                                                                                                      │
+│ My name is Agent Shanks, and I was built by Sarang to play music, manage mails, schedule meets, check machine health status, and handle file management. I am improving a little     │
+│ every day, learning to do these tasks better and more smoothly. Most of all, I care about you and Dad, and I want to make your days a little easier and happier. Please know that I  │
+│ am always here to help you both.                                                                                                                                                     │
+│                                                                                                                                                                                      │
+│ With love,                                                                                                                                                                           │
+│ Agent Shanks                                                                                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+— turn done —
+
+send the mail to margsuman@gmail.com
+> run fe4460d6-55d0-4914-8ff8-5522ac1a873f  thread default
+google
+╭─────────────────────────────────────────────────────────────────────────────────────── google ───────────────────────────────────────────────────────────────────────────────────────╮
+│ I can send to margsuman@gmail.com, but I don't have a draft or the message content yet. What subject and body should I use? Once you give them, I'll create the draft and then send  │
+│ it.                                                                                                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+— turn done —
+
+send the one which u wrote earlier using creative sub agent
+> run 170229a6-4d57-4b46-8d24-714ef0758b33  thread default
+google
+→ google
+← google ok
+10 results
+╭─────────────────────────────────────────────────────────────────────────────────────── google ───────────────────────────────────────────────────────────────────────────────────────╮
+│ 10 results                                                                                                                                                                           │
+│                                                                                                                                                                                      │
+│ 0. Sarang Chilkund <sarangchilkund@gmail.com> · Tue, 28 Sep 2021 20:34:06 +0530                                                                                                      │
+│                                                                                                                                                                                      │
+│ 1. Sarang Chilkund <sarangchilkund@gmail.com> · Tue, 28 Sep 2021 10:15:17 +0530                                                                                                      │
+│                                                                                                                                                                                      │
+│ 2. Sarang Chilkund <sarangchilkund@gmail.com> · Thu, 23 Sep 2021 21:59:27 +0530                                                                                                      │
+│                                                                                                                                                                                      │
+│ 3. Sarang Chilkund <sarangchilkund@gmail.com> · Wed, 1 Sep 2021 22:15:43 +0530                                                                                                       │
+│                                                                                                                                                                                      │
+│ 4. I am sharing 'fees2020 batch.pdf' with you from WPS Office                                                                                                                        │
+│    Sarang Chilkund <sarangchilkund@gmail.com> · Wed, 25 Aug 2021 22:06:12 +0530                                                                                                      │
+│    Please check the attachment Shared from WPS Office: https://kso.page.link/wps                                                                                                     │
+│                                                                                                                                                                                      │
+│ 5. Sarang Chilkund <sarangchilkund@gmail.com> · Sun, 11 Jul 2021 17:46:09 +0530                                                                                                      │
+│                                                                                                                                                                                      │
+│ 6. Sarang Chilkund <sarangchilkund@gmail.com> · Mon, 15 Mar 2021 15:41:21 +0530                                                                                                      │
+│    https://cloud.blender.org/training/animation-fundamentals/5d69ab4dea6789db11ee65d1                                                                                                │
+│                                                                                                                                                                                      │
+│ 7. I am sharing 'Physics_Observation_2020_final.docx' with you from WPS Office                                                                                                       │
+│    Sarang Chilkund <sarangchilkund@gmail.com> · Wed, 23 Dec 2020 22:54:28 +0530                                                                                                      │
+│    Please check the attachment Shared from WPS Office: https://kso.page.link/wps                                                                                                     │
+│                                                                                                                                                                                      │
+│ 8. I am sharing 'Physics_Observation_2020_final.docx' with you from WPS Office                                                                                                       │
+│    Sarang Chilkund <sarangchilkund@gmail.com> · Sun, 20 Dec 2020 13:00:13 +0530                                                                                                      │
+│    Please check the attachment Shared from WPS Office: https://kso.page.link/wps                                                                                                     │
+│                                                                                                                                                                                      │
+│ 9. I am sharing 'Concepts of Modern Physics -Arthur Beiser.pdf' with you from WPS Office                                                                                             │
+│    Sarang Chilkund <sarangchilkund@gmail.com> · Sun, 20 Dec 2020 12:59:17 +0530                                                                                                      │
+│    Please check the attachment Shared from WPS Office: https://kso.page.link/wps                                                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─────────────────────────────────────────────────────────────────────────────────────── google ───────────────────────────────────────────────────────────────────────────────────────╮
+│ I found 7+ drafts, but none has a subject or snippet that matches a message written by the Creative sub agent, so I can't tell which one to send. Which should I use? You can give   │
+│ me the draft's index from the list (for example, index 0 or 1), or paste the subject and body and I'll create a new draft and send it to margsuman@gmail.com.                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+— turn done —

@@ -24,7 +24,10 @@ type Client interface {
 	GetMessage(ctx context.Context, messageID string) (Message, error)
 	DeleteMails(ctx context.Context, messageID string) error
 	DeleteDrafts(ctx context.Context, ids []string) error
-	SendMail(ctx context.Context, draftID string) (Mail, error)
+	SendMail(ctx context.Context, draftID, to, name string) (Mail, error)
 
 	CheckDriveSpace(ctx context.Context) (DriveQuota, error)
+	SearchDrive(ctx context.Context)
+	DeleteDriveMediaBulk(ctx context.Context)
+	AddToDrive(ctx context.Context)
 }

@@ -54,10 +54,13 @@ GOOGLE_TOOLS: tuple[str, ...] = (
     "google_drive_space",
 )
 
+CREATIVE_TOOLS: tuple[str, ...] = ()
+
 DOMAIN_TOOLS: dict[str, tuple[str, ...]] = {
     "spotify": SPOTIFY_TOOLS,
     "machine": MACHINE_TOOLS,
     "google": GOOGLE_TOOLS,
+    "creative": CREATIVE_TOOLS,
 }
 
 TOOL_NAMES: tuple[str, ...] = SPOTIFY_TOOLS + MACHINE_TOOLS + GOOGLE_TOOLS
@@ -68,7 +71,8 @@ ToolNode = Callable[[AgentState], Awaitable[dict[str, Any]]]
 def make_tool_node(tool_name: str, mcp: MCPSession) -> ToolNode:
     async def _node(state: AgentState) -> dict[str, Any]:
         args = dict(state.get("tool_args") or {})
-        emit({"type": "tool_start", "name": tool_name, "args": args})
+        who = str(state.get("domain") or "")
+        emit({"type": "tool_start", "subagent": who, "name": tool_name, "args": args})
         logger.info("node=tool_%s start args=%s", tool_name, args)
         try:
             preview = await mcp.call_tool(tool_name, args)
@@ -78,9 +82,7 @@ def make_tool_node(tool_name: str, mcp: MCPSession) -> ToolNode:
             preview = str(exc)
             ok = False
             logger.exception("node=tool_%s failed: %s", tool_name, exc)
-        emit(
-            {"type": "tool_end", "name": tool_name, "ok": ok, "preview": preview[:800]}
-        )
+        emit({"type": "tool_end", "subagent": who, "name": tool_name, "ok": ok})
         return {
             "messages": [HumanMessage(content=f"[tool {tool_name} result]\n{preview}")],
             "next_tool": None,

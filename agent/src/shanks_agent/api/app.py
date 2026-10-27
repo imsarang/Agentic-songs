@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import json
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 
 from shanks_agent.api.schemas import MCPCallRequest, TurnRequest
-from shanks_agent.observability import configure_tracing
 from shanks_agent.graph.build import get_graph, run_turn
 from shanks_agent.llm import build_failover_llm
 from shanks_agent.mcp.session import MCPSession, format_mcp_error
+from shanks_agent.middleware.chain import before_turn
+from shanks_agent.observability import configure_tracing
 
 app = FastAPI(title="shanks-agent", version="0.1.0")
 
@@ -29,7 +30,21 @@ def _sse(data: dict) -> str:
 
 
 @app.post("/turn")
-async def turn(body: TurnRequest) -> StreamingResponse:
+async def turn(
+    body: TurnRequest,
+    authorization: str | None = Header(default=None),
+) -> StreamingResponse:
+    token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1]
+    err = before_turn(text=body.text, thread_id=body.thread_id, token=token)
+    if err:
+        async def denied():
+            yield _sse({"type": "error", "message": err})
+            yield _sse({"type": "turn_done"})
+
+        return StreamingResponse(denied(), media_type="text/event-stream")
+
     async def events():
         try:
             async for event in run_turn(

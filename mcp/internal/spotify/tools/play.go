@@ -18,10 +18,12 @@ func playHandler(client spotify.Client, found *cache.Search) server.ToolHandlerF
 		}
 		query := strings.TrimSpace(req.GetString("query", ""))
 		title := strings.TrimSpace(req.GetString("title", ""))
-		if query == "" && title == "" {
+		searchID := req.GetInt("search_id", 0)
+		index := req.GetInt("result_index", 0)
+		if query == "" && title == "" && searchID <= 0 {
 			return mcp.NewToolResultError("pass a query or a search handle"), nil
 		}
-		hit, err := found.Pick(ctx, client, query, req.GetInt("search_id", 0), req.GetInt("result_index", 0), title)
+		hit, err := found.Pick(ctx, client, query, searchID, index, title)
 		if err != nil {
 			return textOrErr("", err)
 		}

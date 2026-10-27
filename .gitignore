@@ -9,6 +9,7 @@ mcp/machine.env
 !**/.env.example
 
 # local builds and data
+.local/
 mcp/bin/
 mcp/data/
 agent/shanks-agent

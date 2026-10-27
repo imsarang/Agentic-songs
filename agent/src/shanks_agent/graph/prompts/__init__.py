@@ -12,7 +12,7 @@ from shanks_agent.graph.prompts.router import ROUTER
 from shanks_agent.graph.prompts.spotify import SPOTIFY
 from shanks_agent.llm.failover import FailoverLLM
 
-DOMAINS = ("spotify", "machine", "google")
+DOMAINS = ("spotify", "machine", "google", "creative")
 
 _DOMAIN_PROMPTS = {
     "spotify": SPOTIFY,

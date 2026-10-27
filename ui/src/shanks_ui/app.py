@@ -15,25 +15,20 @@ from shanks_ui.voice import PushToTalk
 console = Console()
 
 
-def _print_event(event: dict) -> None:
+def _print_event(event: dict, subagent: str = "") -> None:
     kind = event.get("type")
-    if kind == "tool_start":
-        name = event.get("name", "?")
-        args = event.get("args") or {}
-        console.print(f"[cyan]→ {name}[/] {escape(str(args))}")
-    elif kind == "tool_end":
-        name = event.get("name", "?")
-        ok = event.get("ok")
-        mark = "[green]ok[/]" if ok else "[red]fail[/]"
-        preview = escape(str(event.get("preview") or "")[:400])
-        console.print(f"[cyan]← {name}[/] {mark}\n{preview}")
+    who = str(event.get("subagent") or event.get("name") or subagent or "").strip()
+    if kind == "subagent":
+        console.print(f"[bold cyan]{escape(who)}[/]")
+    elif kind in ("tool_start", "tool_end"):
+        return
     elif kind == "assistant_message":
         text = escape(str(event.get("text") or ""))
-        console.print(Panel(text, title="assistant", border_style="green"))
+        console.print(Panel(text, title=who or "assistant", border_style="green"))
     elif kind == "error":
         console.print(f"[red]error:[/] {escape(str(event.get('message') or ''))}")
     elif kind == "domain":
-        console.print(f"[dim]domain {event.get('domain')}[/]")
+        return
     elif kind == "run":
         console.print(
             f"[dim]run {event.get('run_id')}  thread {event.get('thread_id')}[/]"
@@ -101,9 +96,10 @@ async def _one_turn(url: str, text: str, thread_id: str, speak_replies: bool) ->
     domain = ""
     try:
         async for event in stream_turn(url, text, thread_id=thread_id, run_id=str(uuid.uuid4())):
-            _print_event(event)
-            if event.get("type") == "domain":
-                domain = str(event.get("domain") or "")
+            kind = event.get("type")
+            if kind in ("domain", "subagent"):
+                domain = str(event.get("name") or event.get("domain") or domain)
+            _print_event(event, domain)
             if speak_replies and event.get("type") == "assistant_message" and domain == "machine":
                 console.print("[yellow]speaking…[/]")
                 try:

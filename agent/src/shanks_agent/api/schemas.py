@@ -7,7 +7,7 @@ class TurnRequest(BaseModel):
     text: str = Field(min_length=1)
     thread_id: str = "default"
     run_id: str | None = None
-    # spotify | machine | google | omit → LLM classifies
+    # spotify | machine | google | creative | omit → LLM classifies
     domain: str | None = None
 
 

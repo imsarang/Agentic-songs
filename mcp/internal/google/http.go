@@ -97,9 +97,6 @@ func (c *HTTPClient) CreateSubject(_ context.Context, subject string) error {
 
 func (c *HTTPClient) CreateDraft(ctx context.Context, to, subject, body string) (Draft, error) {
 	to = strings.TrimSpace(to)
-	if to == "" {
-		return Draft{}, fmt.Errorf("to is required")
-	}
 	subject = strings.TrimSpace(subject)
 	if subject == "" {
 		c.mu.Lock()
@@ -109,12 +106,14 @@ func (c *HTTPClient) CreateDraft(ctx context.Context, to, subject, body string) 
 	if subject == "" {
 		return Draft{}, fmt.Errorf("subject is required")
 	}
-	raw := base64.RawURLEncoding.EncodeToString([]byte(
-		"To: " + to + "\r\n" +
-			"Subject: " + subject + "\r\n" +
-			mailContentType +
-			body,
-	))
+	var msg strings.Builder
+	if to != "" {
+		msg.WriteString("To: " + to + "\r\n")
+	}
+	msg.WriteString("Subject: " + subject + "\r\n")
+	msg.WriteString(mailContentType)
+	msg.WriteString(body)
+	raw := base64.RawURLEncoding.EncodeToString([]byte(msg.String()))
 	var out gmailDraft
 	err := c.call(ctx, http.MethodPost, draftsURL, map[string]any{
 		"message": map[string]string{"raw": raw},
@@ -268,10 +267,23 @@ func (c *HTTPClient) DeleteDrafts(ctx context.Context, ids []string) error {
 	return nil
 }
 
-func (c *HTTPClient) SendMail(ctx context.Context, draftID string) (Mail, error) {
+func (c *HTTPClient) SendMail(ctx context.Context, draftID, to, name string) (Mail, error) {
 	draftID = strings.TrimSpace(draftID)
 	if draftID == "" {
 		return Mail{}, fmt.Errorf("draft id is required")
+	}
+	email := strings.TrimSpace(to)
+	if email == "" && strings.TrimSpace(name) != "" {
+		found, err := c.onlyContact(ctx, name)
+		if err != nil {
+			return Mail{}, err
+		}
+		email = found
+	}
+	if email != "" {
+		if err := c.addressDraft(ctx, draftID, email); err != nil {
+			return Mail{}, err
+		}
 	}
 	var raw gmailMessage
 	err := c.call(ctx, http.MethodPost, draftsSendURL, map[string]string{"id": draftID}, &raw)
@@ -279,6 +291,53 @@ func (c *HTTPClient) SendMail(ctx context.Context, draftID string) (Mail, error)
 		return Mail{}, err
 	}
 	return mailFrom(raw), nil
+}
+
+func (c *HTTPClient) onlyContact(ctx context.Context, name string) (string, error) {
+	rows, err := c.GetReciever(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	if len(rows) == 0 {
+		return "", fmt.Errorf("no contacts")
+	}
+	if len(rows) > 1 {
+		lines := make([]string, 0, len(rows))
+		for _, row := range rows {
+			lines = append(lines, fmt.Sprintf("name=%s email=%s", oneLine(row.Name), oneLine(row.Email)))
+		}
+		return "", fmt.Errorf("multiple contacts\n%s", strings.Join(lines, "\n"))
+	}
+	return rows[0].Email, nil
+}
+
+func (c *HTTPClient) addressDraft(ctx context.Context, draftID, email string) error {
+	v := url.Values{"format": {formatFull}}
+	var draft struct {
+		ID      string       `json:"id"`
+		Message gmailMessage `json:"message"`
+	}
+	if err := c.call(ctx, http.MethodGet, draftsURL+"/"+url.PathEscape(draftID)+"?"+v.Encode(), nil, &draft); err != nil {
+		return err
+	}
+	subject := headerValue(draft.Message.Payload.Headers, headerSubject)
+	if subject == "" {
+		return fmt.Errorf("subject is required")
+	}
+	body := partText(draft.Message.Payload)
+	if body == "" {
+		body = draft.Message.Snippet
+	}
+	raw := base64.RawURLEncoding.EncodeToString([]byte(
+		"To: " + email + "\r\n" +
+			"Subject: " + subject + "\r\n" +
+			mailContentType +
+			body,
+	))
+	return c.call(ctx, http.MethodPut, draftsURL+"/"+url.PathEscape(draftID), map[string]any{
+		"id":      draftID,
+		"message": map[string]string{"raw": raw},
+	}, nil)
 }
 
 func (c *HTTPClient) CheckDriveSpace(ctx context.Context) (DriveQuota, error) {
@@ -294,6 +353,11 @@ func (c *HTTPClient) CheckDriveSpace(ctx context.Context) (DriveQuota, error) {
 		UsageInDriveTrash: q.UsageInDriveTrash,
 	}, nil
 }
+
+// Drive write/search stubs — interface placeholders until implemented.
+func (c *HTTPClient) SearchDrive(context.Context)          {}
+func (c *HTTPClient) DeleteDriveMediaBulk(context.Context) {}
+func (c *HTTPClient) AddToDrive(context.Context)           {}
 
 func (c *HTTPClient) messageMeta(ctx context.Context, id string) (Mail, error) {
 	v := url.Values{

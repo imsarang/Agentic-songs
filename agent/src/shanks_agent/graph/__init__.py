@@ -1,3 +1,3 @@
-from shanks_agent.graph.build import build_graph, run_turn
+from shanks_agent.graph.build import get_graph, get_graphs, run_turn
 
-__all__ = ["build_graph", "run_turn"]
+__all__ = ["get_graph", "get_graphs", "run_turn"]

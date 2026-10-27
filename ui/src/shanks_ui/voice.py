@@ -48,7 +48,7 @@ def _whisper() -> tuple[str, str]:
     local = Path.home() / ".local/bin/whisper-cli"
     model = os.getenv(
         "WHISPER_MODEL_PATH",
-        str(Path.home() / ".local/share/models/whisper/ggml-base.bin"),
+        str(Path.home() / ".local/share/models/whisper/ggml-small.bin"),
     )
     return cli or (str(local) if local.is_file() else "whisper-cli"), model
 
