@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +34,9 @@ const (
 	contactReadMask = "names,emailAddresses"
 
 	driveAboutURL = "https://www.googleapis.com/drive/v3/about?fields=storageQuota"
+	driveFilesURL = "https://www.googleapis.com/drive/v3/files"
+	driveUpload   = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
+	mimeFolder    = "application/vnd.google-apps.folder"
 
 	headerAuth        = "Authorization"
 	headerContentType = "Content-Type"
@@ -354,10 +359,176 @@ func (c *HTTPClient) CheckDriveSpace(ctx context.Context) (DriveQuota, error) {
 	}, nil
 }
 
-// Drive write/search stubs — interface placeholders until implemented.
-func (c *HTTPClient) SearchDrive(context.Context)          {}
-func (c *HTTPClient) DeleteDriveMediaBulk(context.Context) {}
-func (c *HTTPClient) AddToDrive(context.Context)           {}
+func (c *HTTPClient) SearchDrive(ctx context.Context, query string, limit int) ([]DriveFile, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 100
+	}
+	q := "trashed = false"
+	if s := strings.TrimSpace(query); s != "" {
+		if strings.Contains(s, "mimeType") || strings.Contains(s, "name =") || strings.Contains(s, "name contains") {
+			q = s
+			if !strings.Contains(s, "trashed") {
+				q += " and trashed = false"
+			}
+		} else {
+			q = "name contains '" + strings.ReplaceAll(s, "'", "\\'") + "' and " + q
+		}
+	}
+	var out driveList
+	err := c.call(ctx, http.MethodGet, driveFilesURL+"?"+url.Values{
+		"q":                         {q},
+		"pageSize":                  {fmt.Sprintf("%d", limit)},
+		"fields":                    {"files(id,name,mimeType)"},
+		"corpora":                   {"allDrives"},
+		"includeItemsFromAllDrives": {"true"},
+		"supportsAllDrives":         {"true"},
+	}.Encode(), nil, &out)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]DriveFile, len(out.Files))
+	for i, f := range out.Files {
+		rows[i] = DriveFile{Index: i, ID: f.ID, Name: f.Name, Mime: f.MimeType}
+	}
+	return rows, nil
+}
+
+func (c *HTTPClient) OpenDrive(ctx context.Context, file DriveFile, download bool) (string, string, error) {
+	if file.Mime == mimeFolder {
+		return "", "", fmt.Errorf("folder")
+	}
+	u := driveFilesURL + "/" + url.PathEscape(file.ID)
+	if strings.HasPrefix(file.Mime, "application/vnd.google-apps.") {
+		b, err := c.raw(ctx, http.MethodGet, u+"/export?mimeType=text/plain", "", nil)
+		return string(clip(b)), "", err
+	}
+	b, err := c.raw(ctx, http.MethodGet, u+"?alt=media", "", nil)
+	if err != nil {
+		return "", "", err
+	}
+	if !download && strings.HasPrefix(file.Mime, "text/") {
+		return string(clip(b)), "", nil
+	}
+	path := filepath.Join(os.TempDir(), filepath.Base(file.Name))
+	return "", path, os.WriteFile(path, b, 0o600)
+}
+
+func (c *HTTPClient) PutDrive(ctx context.Context, kind, name, parent, path string) (DriveFile, error) {
+	parents, err := c.driveParents(ctx, parent)
+	if err != nil {
+		return DriveFile{}, err
+	}
+	meta := map[string]any{"name": name, "parents": parents}
+	if kind == "folder" {
+		meta["mimeType"] = mimeFolder
+		var out driveItem
+		err := c.call(ctx, http.MethodPost, driveFilesURL, meta, &out)
+		return DriveFile{ID: out.ID, Name: out.Name, Mime: out.MimeType}, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return DriveFile{}, err
+	}
+	if name == "" {
+		meta["name"] = filepath.Base(path)
+	}
+	body, ct := driveMultipart(meta, data)
+	b, err := c.raw(ctx, http.MethodPost, driveUpload, ct, body)
+	if err != nil {
+		return DriveFile{}, err
+	}
+	var out driveItem
+	if err := json.Unmarshal(b, &out); err != nil {
+		return DriveFile{}, err
+	}
+	return DriveFile{ID: out.ID, Name: out.Name, Mime: out.MimeType}, nil
+}
+
+func (c *HTTPClient) DeleteDrive(ctx context.Context, ids []string) error {
+	q := url.Values{"supportsAllDrives": {"true"}}.Encode()
+	for _, id := range ids {
+		u := driveFilesURL + "/" + url.PathEscape(id) + "?" + q
+		if err := c.call(ctx, http.MethodPatch, u, map[string]bool{"trashed": true}, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *HTTPClient) driveParents(ctx context.Context, name string) ([]string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, nil
+	}
+	q := "name = '" + strings.ReplaceAll(name, "'", "\\'") + "' and mimeType = '" + mimeFolder + "' and trashed = false"
+	var out driveList
+	err := c.call(ctx, http.MethodGet, driveFilesURL+"?"+url.Values{
+		"q": {q}, "pageSize": {"1"}, "fields": {"files(id)"},
+	}.Encode(), nil, &out)
+	if err != nil {
+		return nil, err
+	}
+	if len(out.Files) == 0 {
+		return nil, fmt.Errorf("folder not found")
+	}
+	return []string{out.Files[0].ID}, nil
+}
+
+func (c *HTTPClient) raw(ctx context.Context, method, urlStr, contentType string, payload []byte) ([]byte, error) {
+	for attempt := 0; attempt < 2; attempt++ {
+		tok, err := c.tokens.AccessToken(ctx)
+		if err != nil {
+			return nil, err
+		}
+		var body io.Reader
+		if payload != nil {
+			body = bytes.NewReader(payload)
+		}
+		req, err := http.NewRequestWithContext(ctx, method, urlStr, body)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set(headerAuth, authBearerPrefix+tok)
+		if contentType != "" {
+			req.Header.Set(headerContentType, contentType)
+		}
+		res, err := c.http.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		b, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		if res.StatusCode == http.StatusUnauthorized && attempt == 0 {
+			if err := c.tokens.ReLogin(ctx); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if res.StatusCode >= 300 {
+			return nil, fmt.Errorf("%s %s: %d %s", method, urlStr, res.StatusCode, b)
+		}
+		return b, nil
+	}
+	return nil, fmt.Errorf("%s %s: retry failed", method, urlStr)
+}
+
+func driveMultipart(meta map[string]any, data []byte) ([]byte, string) {
+	raw, _ := json.Marshal(meta)
+	boundary := "shanks"
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "--%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n", boundary, raw)
+	fmt.Fprintf(&buf, "--%s\r\nContent-Type: application/octet-stream\r\n\r\n", boundary)
+	buf.Write(data)
+	fmt.Fprintf(&buf, "\r\n--%s--", boundary)
+	return buf.Bytes(), "multipart/related; boundary=" + boundary
+}
+
+func clip(b []byte) []byte {
+	if len(b) > bodyMax {
+		return b[:bodyMax]
+	}
+	return b
+}
 
 func (c *HTTPClient) messageMeta(ctx context.Context, id string) (Mail, error) {
 	v := url.Values{
@@ -529,6 +700,16 @@ type peopleResponse struct {
 			} `json:"emailAddresses"`
 		} `json:"person"`
 	} `json:"results"`
+}
+
+type driveItem struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	MimeType string `json:"mimeType"`
+}
+
+type driveList struct {
+	Files []driveItem `json:"files"`
 }
 
 type driveAbout struct {

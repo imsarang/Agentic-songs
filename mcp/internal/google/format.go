@@ -47,6 +47,18 @@ func FormatContacts(rows []Contact) string {
 	return strings.Join(lines, "\n")
 }
 
+func FormatDriveFiles(id int, rows []DriveFile) string {
+	lines := []string{fmt.Sprintf("search_id=%d", id)}
+	if len(rows) == 0 {
+		lines = append(lines, "no files")
+		return strings.Join(lines, "\n")
+	}
+	for _, row := range rows {
+		lines = append(lines, fmt.Sprintf("index=%d id=%s name=%s mime=%s", row.Index, row.ID, oneLine(row.Name), row.Mime))
+	}
+	return strings.Join(lines, "\n")
+}
+
 func FormatDrive(q DriveQuota) string {
 	return fmt.Sprintf(
 		"limit=%s usage=%s usage_in_drive=%s usage_in_trash=%s",

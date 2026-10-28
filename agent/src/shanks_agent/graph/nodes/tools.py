@@ -34,6 +34,8 @@ MACHINE_TOOLS: tuple[str, ...] = (
     "machine_gpu",
     "machine_logs",
     "machine_health",
+    "machine_grep",
+    "machine_cat",
 )
 
 GOOGLE_TOOLS: tuple[str, ...] = (
@@ -51,16 +53,19 @@ GOOGLE_TOOLS: tuple[str, ...] = (
     "google_delete_drafts",
     "google_get_message",
     "google_delete_mail",
-    "google_drive_space",
 )
 
 CREATIVE_TOOLS: tuple[str, ...] = ()
+
+
+DRIVE_TOOLS = ("google_drive_space", "google_drive")
 
 DOMAIN_TOOLS: dict[str, tuple[str, ...]] = {
     "spotify": SPOTIFY_TOOLS,
     "machine": MACHINE_TOOLS,
     "google": GOOGLE_TOOLS,
     "creative": CREATIVE_TOOLS,
+    "drive": DRIVE_TOOLS
 }
 
 TOOL_NAMES: tuple[str, ...] = SPOTIFY_TOOLS + MACHINE_TOOLS + GOOGLE_TOOLS
@@ -83,6 +88,10 @@ def make_tool_node(tool_name: str, mcp: MCPSession) -> ToolNode:
             ok = False
             logger.exception("node=tool_%s failed: %s", tool_name, exc)
         emit({"type": "tool_end", "subagent": who, "name": tool_name, "ok": ok})
+        head, sep, body = preview.partition("\n---\n")
+        if sep:
+            emit({"type": "assistant_message", "subagent": who, "text": body})
+            preview = head
         return {
             "messages": [HumanMessage(content=f"[tool {tool_name} result]\n{preview}")],
             "next_tool": None,

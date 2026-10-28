@@ -1,0 +1,32 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: shanks-crawl-redis
+    restart: unless-stopped
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    container_name: shanks-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: shanks
+      MINIO_ROOT_PASSWORD: shanks-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+
+  crawl:
+    build: ./crawl
+    container_name: shanks-crawl
+    env_file: ./crawl/.env
+    environment:
+      S3_ENDPOINT: http://minio:9000
+      CELERY_BROKER_URL: redis://redis:6379/1
+      SOURCES_PATH: /app/config/sources.yaml
+    depends_on:
+      - minio
+      - redis
+    volumes:
+      - ./crawl/config:/app/config:ro
+    restart: "no"

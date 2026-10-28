@@ -25,6 +25,13 @@ type Contact struct {
 	Email string
 }
 
+type DriveFile struct {
+	Index int
+	ID    string
+	Name  string
+	Mime  string
+}
+
 type DriveQuota struct {
 	Limit             string
 	Usage             string

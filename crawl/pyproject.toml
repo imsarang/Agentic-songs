@@ -1,0 +1,24 @@
+[project]
+name = "shanks-crawl"
+version = "0.1.0"
+description = "Fetch one filing and publish it to S3 and Celery"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.28.0",
+  "boto3>=1.35.0",
+  "pyyaml>=6",
+  "pydantic>=2",
+  "pydantic-settings>=2.6.0",
+  "pypdf>=5",
+  "celery[redis]>=5",
+]
+
+[project.scripts]
+crawl = "crawl.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crawl"]

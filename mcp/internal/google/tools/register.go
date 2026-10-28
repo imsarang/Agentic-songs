@@ -76,4 +76,17 @@ func Register(s *server.MCPServer, client google.Client) {
 	s.AddTool(mcp.NewTool("google_drive_space",
 		mcp.WithDescription("Read Google Drive storage quota."),
 	), driveSpaceHandler(client))
+
+	s.AddTool(mcp.NewTool("google_drive",
+		mcp.WithString("action", mcp.Description("search, open, put, or delete. delete moves the file to trash")),
+		mcp.WithString("query"),
+		mcp.WithNumber("search_id"),
+		mcp.WithNumber("result_index"),
+		mcp.WithString("result_indexes"),
+		mcp.WithString("download", mcp.Description("true to save bytes locally")),
+		mcp.WithString("kind", mcp.Description("file or folder")),
+		mcp.WithString("name"),
+		mcp.WithString("parent"),
+		mcp.WithString("path", mcp.Description("local file to upload")),
+	), driveHandler(client, &cache.Drive{}))
 }

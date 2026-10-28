@@ -22,12 +22,7 @@ start() {
 
 start spotify env MCP_TRANSPORT=http MCP_ADDR=:8080 SPOTIFY_DATA_DIR="$DATA" "$BIN/spotify"
 start google env MCP_TRANSPORT=http MCP_ADDR=:8004 GOOGLE_DATA_DIR="$DATA" "$BIN/google"
-
-if ss -ltn | grep -q '127.0.0.1:8092'; then
-  echo "machine already up"
-else
-  start machine "$BIN/machine"
-fi
+start machine env MCP_TRANSPORT=http MCP_ADDR=:8092 "$BIN/machine"
 
 aud_py=python3
 if [[ -x audio-analyst/.venv/bin/python ]]; then

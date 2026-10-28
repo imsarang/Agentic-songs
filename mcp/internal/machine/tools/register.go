@@ -58,4 +58,13 @@ func Register(s *server.MCPServer) {
 	s.AddTool(mcp.NewTool("machine_health",
 		mcp.WithDescription("Judge disk, memory, CPU, IO, network, and battery as ok, warn, or crit using fixed thresholds. Returns one JSON object."),
 	), healthHandler())
+
+	s.AddTool(mcp.NewTool("machine_grep",
+		mcp.WithString("query", mcp.Required()),
+		mcp.WithString("path"),
+	), grepHandler())
+	
+	s.AddTool(mcp.NewTool("machine_cat",
+		mcp.WithString("path", mcp.Required()),
+	), catHandler())
 }

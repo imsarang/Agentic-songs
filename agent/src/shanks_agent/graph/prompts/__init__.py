@@ -8,16 +8,18 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from shanks_agent.graph.prompts.base import BASE
 from shanks_agent.graph.prompts.google import GOOGLE
 from shanks_agent.graph.prompts.machine import MACHINE
+from shanks_agent.graph.prompts.drive import DRIVE
 from shanks_agent.graph.prompts.router import ROUTER
 from shanks_agent.graph.prompts.spotify import SPOTIFY
 from shanks_agent.llm.failover import FailoverLLM
 
-DOMAINS = ("spotify", "machine", "google", "creative")
+DOMAINS = ("spotify", "machine", "google", "drive", "creative")
 
 _DOMAIN_PROMPTS = {
     "spotify": SPOTIFY,
     "machine": MACHINE,
     "google": GOOGLE,
+    "drive": DRIVE
 }
 
 

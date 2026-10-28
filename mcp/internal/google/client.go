@@ -27,7 +27,8 @@ type Client interface {
 	SendMail(ctx context.Context, draftID, to, name string) (Mail, error)
 
 	CheckDriveSpace(ctx context.Context) (DriveQuota, error)
-	SearchDrive(ctx context.Context)
-	DeleteDriveMediaBulk(ctx context.Context)
-	AddToDrive(ctx context.Context)
+	SearchDrive(ctx context.Context, query string, limit int) ([]DriveFile, error)
+	OpenDrive(ctx context.Context, file DriveFile, download bool) (body, path string, err error)
+	PutDrive(ctx context.Context, kind, name, parent, path string) (DriveFile, error)
+	DeleteDrive(ctx context.Context, ids []string) error
 }

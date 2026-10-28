@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from shanks_agent.llm.failover import FailoverLLM
 
-DOMAINS = ("spotify", "machine", "google", "creative")
+DOMAINS = ("spotify", "machine", "google", "drive", "creative")
 
 _PLAN = """Pick which specialists to run for this user message.
 Reply ONLY JSON: {"domains":["spotify"]} or {"domains":["creative","google"]}
@@ -15,11 +15,13 @@ Recent lines are one line per domain, not the full history. Choose domains for t
 A revision continues the domain that already holds that piece. A new request does not.
 spotify = music search, play, pause, skip, playlists.
 machine = this computer: specs, CPU, GPU, memory, disk, load, processes, battery, network, logs, health.
-google = gmail, contacts, drafts, send mail, trash mail, drive space. Reads and sends. Does not write the prose.
+google = gmail, contacts, drafts, send mail, trash mail. Reads and sends. Does not write the prose. Does not touch Drive files.
+drive = Google Drive files and folders: list, open, upload, download, trash, quota. Not mail.
 creative = writes the words: a mail body, poem, note, caption, or story.
 When the user asks to write a letter or mail, the runner always does creative then google.
 You can return that pair. Sending a letter Creative already wrote is google alone. Do not search the mailbox for it.
-google alone to read, search, trash, or check drive.
+google alone to read, search, or trash mail.
+drive alone to list, open, upload, download, or trash Drive files and folders.
 creative alone when nothing has to be sent or played.
 """
 

@@ -21,7 +21,7 @@ const (
 	// users.messages.list, users.drafts.create, users.drafts.send, users.messages.trash
 	// people.searchContacts
 	// drive.about.get
-	scopes = "https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/drive.metadata.readonly"
+	scopes = "https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/drive"
 )
 
 func Login(ctx context.Context, path, id, secret, redirect string) error {
