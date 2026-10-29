@@ -1,7 +1,7 @@
 from pathlib import Path
 import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from crawl.models import Source
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -20,6 +20,6 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://127.0.0.1:6380/1"
 
 
-def load_sources(path: Path) -> list[Source]:
+def load_sources(path: Path) -> list[tuple[str, str]]:
     raw = yaml.safe_load(path.read_text())
-    return [Source.model_validate(row) for row in raw["sources"]]
+    return [(str(row["id"]), str(row["url"])) for row in raw["sources"]]

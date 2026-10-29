@@ -1,0 +1,52 @@
+[
+  {
+    "question": "What HTTP status does the rate limiter return when a client exceeds the limit?",
+    "answer": "HTTP 429 Too Many Requests",
+    "contains": ["HTTP 429", "Too Many Requests"]
+  },
+  {
+    "question": "What request rate and user count does this design assume?",
+    "answer": "1 million requests per second across 100 million daily active users",
+    "contains": ["1 million requests per second across 100 million daily active users"]
+  },
+  {
+    "question": "What latency overhead should one rate-limit check add?",
+    "answer": "less than 10ms",
+    "contains": ["< 10ms"]
+  },
+  {
+    "question": "How does the system identify a client?",
+    "answer": "user ID, IP address, or API key",
+    "contains": ["user ID, IP address, or API key"]
+  },
+  {
+    "question": "What does isRequestAllowed return?",
+    "answer": "passes, remaining, and resetTime",
+    "contains": ["isRequestAllowed", "resetTime"]
+  },
+  {
+    "question": "Which placement does the breakdown call the great solution?",
+    "answer": "API gateway or load balancer",
+    "contains": ["API Gateway/Load Balancer"]
+  },
+  {
+    "question": "Which algorithm does the breakdown choose, and which company is named as using it?",
+    "answer": "Token bucket. Stripe.",
+    "contains": ["Token Bucket", "Stripe"]
+  },
+  {
+    "question": "What is the fixed-window boundary problem in the example?",
+    "answer": "100 requests at 12:00:59 and 100 at 12:01:00, so 200 requests in 2 seconds",
+    "contains": ["200 requests in 2 seconds"]
+  },
+  {
+    "question": "Why does a single Redis instance fail at the target scale?",
+    "answer": "It can handle about 50,000 to 100,000 rate-limit checks per second, and the target is 1 million requests per second",
+    "contains": ["50,000-100,000", "1M requests/second"]
+  },
+  {
+    "question": "How are a client's requests kept on one Redis shard?",
+    "answer": "Consistent hashing of the client id",
+    "contains": ["consistent hashing"]
+  }
+]

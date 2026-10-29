@@ -1,5 +1,2 @@
-from crawl.models import Source
-
-
-def scrape_body(source: Source) -> dict:
-    return {"url": str(source.url), "formats": ["rawBase64"], "parsers": []}
+def scrape_body(url: str) -> dict:
+    return {"url": url, "formats": ["rawBase64"], "parsers": []}

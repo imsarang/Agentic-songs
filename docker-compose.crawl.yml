@@ -2,6 +2,21 @@ services:
   redis:
     image: redis:7.4-alpine
     container_name: shanks-crawl-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6391:6379"
+    volumes:
+      - crawl-redis:/data
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.20.0
+    container_name: shanks-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-storage:/qdrant/storage
     restart: unless-stopped
 
   minio:
@@ -21,6 +36,7 @@ services:
     container_name: shanks-crawl
     env_file: ./crawl/.env
     environment:
+      PYTHONUNBUFFERED: "1"
       S3_ENDPOINT: http://minio:9000
       CELERY_BROKER_URL: redis://redis:6379/1
       SOURCES_PATH: /app/config/sources.yaml
@@ -30,3 +46,7 @@ services:
     volumes:
       - ./crawl/config:/app/config:ro
     restart: "no"
+
+volumes:
+  qdrant-storage:
+  crawl-redis:

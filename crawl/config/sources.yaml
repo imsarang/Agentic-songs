@@ -1,9 +1,3 @@
 sources:
-  - id: reliance-ar-fy2026
-    url: https://nsearchives.nseindia.com/annual_reports/AR_29285_RELIANCE_2025_2026_A_11007429_28052026133947.pdf
-    symbol: RELIANCE
-    fiscal_year: 2026
-    period: FY
-    scope: consolidated
-    doc_type: annual_report
-    kind: narrative
+  - id: hello-interview-rate-limitter
+    url: https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter

@@ -12,6 +12,7 @@ def main() -> None:
     queue = CeleryQueue(settings)
     store.ensure_bucket()
     fetcher = FireCrawl(settings)
-    for source in sources:
-        message = publish_one(source, fetcher, store, queue)
-        print(message.model_dump_json())
+    for source_id, url in sources:
+        message = publish_one(source_id, url, fetcher, store, queue)
+        if message:
+            print(message.model_dump_json())

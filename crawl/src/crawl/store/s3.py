@@ -29,3 +29,18 @@ class S3Store:
             ContentType=content_type,
             Metadata=meta,
         )
+
+    def raw_for_url(self, source_id: str, url: str) -> str | None:
+        listed = self.client.list_objects_v2(
+            Bucket = self.bucket,
+            Prefix = f"raw/{source_id}/"
+        )
+
+        for item in listed.get("Contents", []):
+            head = self.client.head_object(
+                Bucket = self.bucket,
+                Key = item["Key"]
+            )
+            if head["Metadata"].get("url") == url:
+                return item["Key"]
+        return None

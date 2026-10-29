@@ -9,7 +9,7 @@ LOCAL_BIN := $(ROOT).local/bin
 LOCAL_LOG := $(ROOT).local/logs
 LOCAL_PID := $(ROOT).local/pids
 
-.PHONY: up down boot local local-down local-bins local-ui minio local-crawl-down
+.PHONY: up down boot local local-down local-bins local-ui minio local-crawl-down worker
 
 up:
 	mkdir -p -m 700 $(SHANKS_SPOTIFY_DIR)
@@ -60,11 +60,13 @@ local-down:
 	@bash -eu $(ROOT)scripts/local-down.sh $(LOCAL_PID)
 
 minio:
-	docker compose -f $(ROOT)docker-compose.crawl.yml up -d
-	@echo "minio http://127.0.0.1:9000  console http://127.0.0.1:9001  crawl container shanks-crawl"
+	bash $(ROOT)scripts/crawl-up.sh
 
 local-crawl-down:
 	docker compose -f $(ROOT)docker-compose.crawl.yml down
+
+worker:
+	bash $(ROOT)scripts/worker.sh
 
 local-bins:
 	mkdir -p $(LOCAL_BIN)
