@@ -27,54 +27,53 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # Web API MCP — playback targets host desktop Spotify (Connect device).
-  # Tokens: ~/.config/shanks bind-mounted at /data
-  spotify:
-    build: ./mcp
-    env_file: ./mcp/.env
-    environment:
-      SPOTIFY_DATA_DIR: /data
-      MCP_TRANSPORT: http
-      MCP_ADDR: ":8080"
-      SPOTIFY_IN_DOCKER: "1"
-    volumes:
-      - ${SHANKS_SPOTIFY_DIR:-${HOME}/.config/shanks}:/data
-    ports:
-      - "8080:8080"
-      - "4381:4381"
+  # Spotify, commented for now.
+  # spotify:
+  #   build: ./mcp
+  #   env_file: ./mcp/.env
+  #   environment:
+  #     SPOTIFY_DATA_DIR: /data
+  #     MCP_TRANSPORT: http
+  #     MCP_ADDR: ":8080"
+  #     SPOTIFY_IN_DOCKER: "1"
+  #   volumes:
+  #     - ${SHANKS_SPOTIFY_DIR:-${HOME}/.config/shanks}:/data
+  #   ports:
+  #     - "8080:8080"
+  #     - "4381:4381"
 
-  # Gmail, contacts, and Drive quota. Tokens share the Spotify data dir.
-  google:
-    build:
-      context: ./mcp
-      args:
-        BIN: google
-    env_file: ./mcp/.env
-    environment:
-      GOOGLE_DATA_DIR: /data
-      MCP_TRANSPORT: http
-      MCP_ADDR: ":8080"
-      GOOGLE_IN_DOCKER: "1"
-      GOOGLE_OPEN_URL: http://host.docker.internal:4390/open
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - ${SHANKS_SPOTIFY_DIR:-${HOME}/.config/shanks}:/data
-    ports:
-      - "8004:8080"
-      - "4382:4382"
+  # Google, commented for now.
+  # google:
+  #   build:
+  #     context: ./mcp
+  #     args:
+  #       BIN: google
+  #   env_file: ./mcp/.env
+  #   environment:
+  #     GOOGLE_DATA_DIR: /data
+  #     MCP_TRANSPORT: http
+  #     MCP_ADDR: ":8080"
+  #     GOOGLE_IN_DOCKER: "1"
+  #     GOOGLE_OPEN_URL: http://host.docker.internal:4390/open
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   volumes:
+  #     - ${SHANKS_SPOTIFY_DIR:-${HOME}/.config/shanks}:/data
+  #   ports:
+  #     - "8004:8080"
+  #     - "4382:4382"
 
-  # ReAct agent — talks to spotify MCP; LLM may be host LM Studio via host.docker.internal
+  # ReAct agent — LLM may be host LM Studio via host.docker.internal
   agent:
     build: ./agent
     env_file: ./agent/.env
     environment:
       AGENT_HOST: "0.0.0.0"
       AGENT_PORT: "8001"
-      MCP_URL: http://spotify:8080/mcp
-      # Machine MCP usually runs on the host (:8092), not in compose yet
-      MACHINE_MCP_URL: http://host.docker.internal:8092/mcp
-      GOOGLE_MCP_URL: http://google:8080/mcp
+      # MCP_URL: http://spotify:8080/mcp
+      # MACHINE_MCP_URL: http://host.docker.internal:8092/mcp
+      # GOOGLE_MCP_URL: http://google:8080/mcp
+      RETRIEVE_MCP_URL: http://retriever:8093/mcp
       REDIS_URL: redis://redis:6379/0
       # Reach LM Studio / Ollama on the host (overrides 127.0.0.1 from .env)
       LOCAL_BASE_URL: http://host.docker.internal:1234/v1
@@ -83,8 +82,9 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      - spotify
-      - google
+      # - spotify
+      # - google
+      - retriever
       - grafana
       - redis
     restart: unless-stopped
@@ -101,23 +101,25 @@ services:
     stdin_open: true
     tty: true
 
-  # MCP brain only — reads Redis wire written by ./host/run.sh (systemd/process)
-  audio-analyst:
+  # Study retrieval. Qdrant and the embed server run on the host.
+  retriever:
+    image: shanks-mcp-py
     build:
-      context: ./audio-analyst
+      context: .
+      dockerfile: mcp-py/Dockerfile
       args:
         UID: 1000
         GID: 1000
+    command: ["python", "/app/mcp-py/cmd/retriever/main.py"]
     user: "1000:1000"
     environment:
       MCP_TRANSPORT: http
-      MCP_ADDR: ":8090"
+      MCP_ADDR: ":8093"
+      QDRANT_URL: http://host.docker.internal:6333
+      EMBED_URL: http://host.docker.internal:8091/embed
       REDIS_URL: redis://redis:6379/0
-      WIRE_KEY: analyst:wire:latest
-      SAMPLE_COUNT: "5"
-      SAMPLE_GAP_MS: "15000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      - "8090:8090"
-    depends_on:
-      - redis
+      - "8093:8093"
     restart: unless-stopped

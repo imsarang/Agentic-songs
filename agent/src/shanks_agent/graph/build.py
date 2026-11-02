@@ -12,7 +12,6 @@ from shanks_agent.graph.domains import build_all
 from shanks_agent.graph.nodes.agent import seed_messages
 from shanks_agent.graph.nodes.writer import draft_from
 from shanks_agent.graph.orchestrator import merge, plan
-from shanks_agent.middleware.policy.domain_defaults import letter_to_send
 from shanks_agent.llm.failover import FailoverLLM, build_failover_llm
 from shanks_agent.observability import new_run_id
 
@@ -69,9 +68,10 @@ async def run_turn(
             metadata={"run_id": run_key},
         ) as plan_run:
             domains = await plan(llm, user_text, hint, forced=domain or follow)
-            if letter_to_send(user_text):
-                rest = [d for d in domains if d not in ("creative", "google")]
-                domains = ["creative", "google", *rest]
+            # creative is commented out for now.
+            # if letter_to_send(user_text):
+            #     rest = [d for d in domains if d not in ("creative", "google")]
+            #     domains = ["creative", "google", *rest]
             plan_run.end(outputs={"domains": domains})
 
         ls_run.name = "shanks-" + "+".join(domains)
@@ -144,6 +144,7 @@ async def run_turn(
                         "next_tool": None,
                         "tool_args": {},
                         "present": "raw",
+                        "run_id": run_key
                     },
                     config={
                         "configurable": {"thread_id": thread_id},

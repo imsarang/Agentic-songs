@@ -20,19 +20,19 @@ start() {
   echo "$name pid $(cat "$PID/$name.pid")"
 }
 
-start spotify env MCP_TRANSPORT=http MCP_ADDR=:8080 SPOTIFY_DATA_DIR="$DATA" "$BIN/spotify"
-start google env MCP_TRANSPORT=http MCP_ADDR=:8004 GOOGLE_DATA_DIR="$DATA" "$BIN/google"
-start machine env MCP_TRANSPORT=http MCP_ADDR=:8092 "$BIN/machine"
+# start spotify env MCP_TRANSPORT=http MCP_ADDR=:8080 SPOTIFY_DATA_DIR="$DATA" "$BIN/spotify"
+# start google env MCP_TRANSPORT=http MCP_ADDR=:8004 GOOGLE_DATA_DIR="$DATA" "$BIN/google"
+# start machine env MCP_TRANSPORT=http MCP_ADDR=:8092 "$BIN/machine"
 
 aud_py=python3
-if [[ -x audio-analyst/.venv/bin/python ]]; then
-  aud_py=$ROOT/audio-analyst/.venv/bin/python
+if [[ -x mcp-py/.venv/bin/python ]]; then
+  aud_py=$ROOT/mcp-py/.venv/bin/python
 fi
-(
-  cd "$ROOT/audio-analyst"
-  start analyst env MCP_TRANSPORT=http MCP_ADDR=:8090 REDIS_URL=redis://127.0.0.1:6380/0 \
-    "$aud_py" -m app.mcp_server
-)
+start retriever env MCP_TRANSPORT=http MCP_ADDR=:8093 \
+  QDRANT_URL="${QDRANT_URL:-http://127.0.0.1:6333}" \
+  EMBED_URL="${EMBED_URL:-http://127.0.0.1:8091/embed}" \
+  PYTHONPATH="$ROOT/mcp-py" \
+  "$aud_py" "$ROOT/mcp-py/cmd/retriever/main.py"
 
 if [[ -x agent/.venv/bin/shanks-agent ]]; then
   start agent "$ROOT/agent/.venv/bin/shanks-agent"

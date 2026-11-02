@@ -4,6 +4,9 @@ import uuid
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
     PointStruct,
     TextIndexParams,
     TokenizerType,
@@ -20,23 +23,42 @@ class VectorStore:
         self._ensure()
 
     def _ensure(self) -> None:
-        if self.client.collection_exists(_COLLECTION):
-            return
-        self.client.create_collection(
+        if not self.client.collection_exists(_COLLECTION):
+            
+            self.client.create_collection(
+                collection_name=_COLLECTION,
+                vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
+            )
+        
+            self.client.create_payload_index(
+                collection_name=_COLLECTION,
+                field_name="body",
+                field_schema=TextIndexParams(
+                    type="text",
+                    tokenizer=TokenizerType.WORD,
+                    min_token_len=2,
+                    max_token_len=20,
+                    lowercase=True,
+                ),
+            )
+        schema = self.client.get_collection(_COLLECTION).payload_schema or {}
+        if "sha256" not in schema:
+            self.client.create_payload_index(
+                collection_name = _COLLECTION,
+                field_name="sha256",
+                field_schema="keyword"
+            )
+
+    def has_sha256(self, digest: str) -> bool:
+        points, _ = self.client.scroll(
             collection_name=_COLLECTION,
-            vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
-        )
-        self.client.create_payload_index(
-            collection_name=_COLLECTION,
-            field_name="body",
-            field_schema=TextIndexParams(
-                type="text",
-                tokenizer=TokenizerType.WORD,
-                min_token_len=2,
-                max_token_len=20,
-                lowercase=True,
+            scroll_filter=Filter(
+                must=[FieldCondition(key="sha256", match=MatchValue(value=digest))]
             ),
+            limit=1,
+            with_payload=False,
         )
+        return bool(points)
 
     def upsert(self, message: dict, parts: list[str], vectors: list[list[float]]) -> int:
         points = [

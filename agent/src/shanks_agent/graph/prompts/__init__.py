@@ -11,15 +11,19 @@ from shanks_agent.graph.prompts.machine import MACHINE
 from shanks_agent.graph.prompts.drive import DRIVE
 from shanks_agent.graph.prompts.router import ROUTER
 from shanks_agent.graph.prompts.spotify import SPOTIFY
+from shanks_agent.graph.prompts.study import STUDY
+
 from shanks_agent.llm.failover import FailoverLLM
 
-DOMAINS = ("spotify", "machine", "google", "drive", "creative")
+# creative is commented out for now.
+DOMAINS = ("spotify", "machine", "google", "drive", "study")
 
 _DOMAIN_PROMPTS = {
     "spotify": SPOTIFY,
     "machine": MACHINE,
     "google": GOOGLE,
-    "drive": DRIVE
+    "drive": DRIVE,
+    "study": STUDY
 }
 
 
@@ -63,4 +67,4 @@ async def resolve_domain(
         )
     else:
         raw = str(ai.content or "")
-    return _parse_domain(raw) or "spotify"
+    return _parse_domain(raw) or "study"

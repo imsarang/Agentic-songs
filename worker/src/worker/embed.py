@@ -1,19 +1,14 @@
+import json
 import os
-
-import torch
-from sentence_transformers import SentenceTransformer
+import urllib.request
 
 
-class Embedder:
-    def __init__(self) -> None:
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        kwargs = {"torch_dtype": torch.float16} if self.device == "cuda" else {}
-        self.model = SentenceTransformer(
-            os.environ["EMBED_MODEL_PATH"],
-            device=self.device,
-            model_kwargs=kwargs,
-        )
-
-    def embed(self, texts: list[str]) -> list[list[float]]:
-        vectors = self.model.encode(texts, normalize_embeddings=True, batch_size=2)
-        return [row.tolist() for row in vectors]
+def embed(texts: list[str], kind: str) -> list[list[float]]:
+    raw = json.dumps({"texts": texts, "kind": kind}).encode()
+    req = urllib.request.Request(
+        os.environ.get("EMBED_URL", "http://127.0.0.1:8091/embed"),
+        data=raw,
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req) as res:
+        return json.load(res)["vectors"]

@@ -6,7 +6,8 @@ from redis.asyncio import Redis
 
 r = Redis.from_url(os.getenv("REDIS_URL", "redis://127.0.0.1:6380/0"), decode_responses=True)
 
-DOMAINS = ("spotify", "machine", "google", "drive", "creative")
+# creative is commented out for now.
+DOMAINS = ("spotify", "machine", "google", "drive", "study")
 KEEP = 5
 _DRAFT = re.compile(r"draft_id=(\S+)")
 _FOLLOW = {

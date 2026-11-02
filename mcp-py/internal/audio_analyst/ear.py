@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import time
 
-from app import store
+from internal.audio_analyst import store
 
 WIRE_KEY = os.getenv("WIRE_KEY", "analyst:wire:latest")
 WIRE_MAX_AGE_SEC = float(os.getenv("WIRE_MAX_AGE_SEC", "30"))

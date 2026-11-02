@@ -9,7 +9,7 @@ if [[ -f $PID/redis.pid ]]; then
   rm -f "$PID/redis.pid" "$PID/../redis.rdb"
 fi
 docker stop shanks-grafana >/dev/null 2>&1 || true
-for name in spotify google machine analyst agent; do
+for name in spotify google machine analyst agent retriever embed worker; do
   file=$PID/$name.pid
   if [[ -f $file ]]; then
     kill "$(cat "$file")" 2>/dev/null || true

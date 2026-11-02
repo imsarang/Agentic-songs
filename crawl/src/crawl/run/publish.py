@@ -16,10 +16,6 @@ def publish_one(
     queue: QueueInterface,
 ) -> QueueMessage | None:
 
-
-    if store.raw_for_url(source_id, url):
-        return None
-
     fetched = fetcher.fetch(scrape_body(url))
     if not fetched.body:
         raise CheckError(f"{source_id} returned an empty body")
@@ -27,6 +23,10 @@ def publish_one(
     derived = parser_for(fetched.content_type).derive(fetched)
     digest = sha256_hex(fetched.body)
     raw = raw_key(source_id, digest)
+
+    if store.raw_for_url(source_id, url) == raw:
+        return None
+
     derived_path = derived_key(source_id, digest, derived.suffix)
     meta = {"source_id": source_id, "url": url}
     store.put(raw, fetched.body, fetched.content_type, meta)

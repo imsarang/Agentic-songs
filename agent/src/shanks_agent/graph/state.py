@@ -8,3 +8,4 @@ class AgentState(TypedDict, total=False):
     next_tool: str | None
     tool_args: dict[str, Any]
     present: str
+    run_id: str

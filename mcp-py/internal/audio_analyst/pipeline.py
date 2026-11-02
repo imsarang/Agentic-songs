@@ -1,11 +1,11 @@
-"""decide(): Redis samples + rules. Features come from host via app.ear."""
+"""decide(): Redis samples + rules. Features come from host via ear."""
 
 from __future__ import annotations
 
 import time
 
-from app import decisions, features, store
-from app.ear import sample_features
+from internal.audio_analyst import decisions, features, store
+from internal.audio_analyst.ear import sample_features
 
 
 def _with_rules(payload: dict) -> dict:

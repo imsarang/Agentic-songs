@@ -5,10 +5,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from shanks_agent.llm.failover import FailoverLLM
 
-DOMAINS = ("spotify", "machine", "google", "drive", "creative")
+# creative is commented out for now.
+DOMAINS = ("spotify", "machine", "google", "drive", "study")
 
 _PLAN = """Pick which specialists to run for this user message.
-Reply ONLY JSON: {"domains":["spotify"]} or {"domains":["creative","google"]}
+Reply ONLY JSON: {"domains":["study"]} or {"domains":["spotify"]}
 Use more than one only when the user clearly asks for two different things.
 Keep the list in the order they should run.
 Recent lines are one line per domain, not the full history. Choose domains for the new message.
@@ -17,12 +18,10 @@ spotify = music search, play, pause, skip, playlists.
 machine = this computer: specs, CPU, GPU, memory, disk, load, processes, battery, network, logs, health.
 google = gmail, contacts, drafts, send mail, trash mail. Reads and sends. Does not write the prose. Does not touch Drive files.
 drive = Google Drive files and folders: list, open, upload, download, trash, quota. Not mail.
-creative = writes the words: a mail body, poem, note, caption, or story.
-When the user asks to write a letter or mail, the runner always does creative then google.
-You can return that pair. Sending a letter Creative already wrote is google alone. Do not search the mailbox for it.
 google alone to read, search, or trash mail.
 drive alone to list, open, upload, download, or trash Drive files and folders.
-creative alone when nothing has to be sent or played.
+study = a question, summary, or explanation of a topic, including "what is", "summarize", and "tell me about". Use the saved documents. Not mail, not music, not this computer.
+study alone for a question or summary about a topic.
 """
 
 
@@ -46,7 +45,7 @@ async def plan(llm: FailoverLLM, text: str, hint: str = "", forced: str | None =
             return out
     except Exception:
         pass
-    return ["spotify"]
+    return ["study"]
 
 
 async def merge(llm: FailoverLLM, user: str, stubs: list[str]) -> str:

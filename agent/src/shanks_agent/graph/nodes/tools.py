@@ -55,17 +55,20 @@ GOOGLE_TOOLS: tuple[str, ...] = (
     "google_delete_mail",
 )
 
-CREATIVE_TOOLS: tuple[str, ...] = ()
+# CREATIVE_TOOLS: tuple[str, ...] = ()
 
 
 DRIVE_TOOLS = ("google_drive_space", "google_drive")
+
+STUDY_TOOLS: tuple[str, ...] = ("retrieve",)
 
 DOMAIN_TOOLS: dict[str, tuple[str, ...]] = {
     "spotify": SPOTIFY_TOOLS,
     "machine": MACHINE_TOOLS,
     "google": GOOGLE_TOOLS,
-    "creative": CREATIVE_TOOLS,
-    "drive": DRIVE_TOOLS
+    # "creative": CREATIVE_TOOLS,
+    "drive": DRIVE_TOOLS,
+    "study": STUDY_TOOLS
 }
 
 TOOL_NAMES: tuple[str, ...] = SPOTIFY_TOOLS + MACHINE_TOOLS + GOOGLE_TOOLS
@@ -76,6 +79,10 @@ ToolNode = Callable[[AgentState], Awaitable[dict[str, Any]]]
 def make_tool_node(tool_name: str, mcp: MCPSession) -> ToolNode:
     async def _node(state: AgentState) -> dict[str, Any]:
         args = dict(state.get("tool_args") or {})
+        
+        if tool_name == "retrieve":
+            args["run_id"] = str(state.get("run_id") or "")
+        
         who = str(state.get("domain") or "")
         emit({"type": "tool_start", "subagent": who, "name": tool_name, "args": args})
         logger.info("node=tool_%s start args=%s", tool_name, args)

@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -9,45 +10,60 @@ os.environ.setdefault("S3_BUCKET", "shanks-raw")
 os.environ.setdefault("S3_ACCESS_KEY", "shanks")
 os.environ.setdefault("S3_SECRET_KEY", "shanks-secret")
 os.environ.setdefault("S3_REGION", "us-east-1")
+os.environ.setdefault("EMBED_URL", "http://127.0.0.1:8091/embed")
 os.environ.setdefault("EMBED_MODEL_PATH", str(Path.home() / ".local/models/bge-large-en-v1.5"))
 
-import sys
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "worker" / "src"))
+sys.path.insert(0, str(ROOT / "mcp-py"))
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
-
+from internal.retriever.fuse import _rrf
+from internal.retriever.keyword import _bm25
 from worker.chunk import Chunker
-from worker.embed import Embedder
+from worker.embed import embed
 from worker.objects import get_object
 
 SIZES = (128, 256, 384, 510)
 OVERLAP = 50
 K = 5
-QUERY = "Represent this sentence for searching relevant passages: "
-TEXT_KEY = (
-    "text/hello-interview-rate-limitter/"
-    "f94571551026676943f158f0cfdfc5c4987bdfdc85fd07f08b97fee1bfcf9678.txt"
-)
+POOL = 8
+SOURCE_ID = "hello-interview-rate-limitter"
 
 
-def relevant(chunks: list[str], needles: list[str]) -> set[int]:
-    folded = [chunk.lower() for chunk in chunks]
+def relevant(chunks: list[str], needles: list[str]) -> set[str]:
     need = [needle.lower() for needle in needles]
-    return {i for i, chunk in enumerate(folded) if all(needle in chunk for needle in need)}
+    return {
+        str(i)
+        for i, chunk in enumerate(chunks)
+        if all(needle in chunk.lower() for needle in need)
+    }
 
 
-def top_k(matrix: np.ndarray, query: np.ndarray, k: int) -> list[int]:
+def semantic(chunks: list[str], matrix: np.ndarray, query: np.ndarray) -> list[dict]:
     scores = matrix @ query
-    k = min(k, len(scores))
+    k = min(POOL, len(scores))
     picked = np.argpartition(scores, -k)[-k:]
     order = picked[np.argsort(scores[picked])[::-1]]
-    return [int(i) for i in order]
+    return [{"id": str(int(i)), "body": chunks[int(i)]} for i in order]
+
+
+def keyword(query: str, chunks: list[str]) -> list[dict]:
+    ranked = sorted(enumerate(_bm25(query, chunks)), key=lambda row: row[1], reverse=True)
+    return [
+        {"id": str(i), "body": chunks[i]}
+        for i, score in ranked[:POOL]
+        if score > 0
+    ]
 
 
 def evaluate(chunks: list[str], matrix: np.ndarray, questions: list[dict], queries: np.ndarray) -> dict:
     accuracy = precision = recall = 0.0
     for row, item in zip(queries, questions):
         gold = relevant(chunks, item["contains"])
-        got = set(top_k(matrix, row, K))
+        got = {chunk["id"] for chunk in _rrf([
+            semantic(chunks, matrix, row),
+            keyword(item["question"], chunks),
+        ])[:K]}
         hit = gold & got
         accuracy += 1.0 if hit else 0.0
         precision += len(hit) / K
@@ -60,13 +76,31 @@ def evaluate(chunks: list[str], matrix: np.ndarray, questions: list[dict], queri
     }
 
 
+def text_key(source_id: str) -> str:
+    import boto3
+
+    client = boto3.client(
+        "s3",
+        endpoint_url=os.environ["S3_ENDPOINT"],
+        aws_access_key_id=os.environ["S3_ACCESS_KEY"],
+        aws_secret_access_key=os.environ["S3_SECRET_KEY"],
+        region_name=os.environ.get("S3_REGION", "us-east-1"),
+    )
+    found = client.list_objects_v2(
+        Bucket=os.environ.get("S3_BUCKET", "shanks-raw"),
+        Prefix=f"text/{source_id}/",
+    )
+    keys = [item["Key"] for item in found.get("Contents") or [] if item["Key"].endswith(".txt")]
+    if not keys:
+        raise SystemExit(f"no text object for {source_id}")
+    return keys[0]
+
+
 def main() -> None:
     questions = json.loads((Path(__file__).parent / "questions.json").read_text())
-    text = get_object(TEXT_KEY).decode()
-    embedder = Embedder()
-    print(f"device {embedder.device}")
+    text = get_object(text_key(SOURCE_ID)).decode()
     queries = np.asarray(
-        embedder.embed([QUERY + item["question"] for item in questions]),
+        embed([item["question"] for item in questions], "query"),
         dtype=np.float32,
     )
     rows = []
@@ -74,7 +108,7 @@ def main() -> None:
         chunker = Chunker(size=size, overlap=OVERLAP)
         chunker.tokenizer.model_max_length = 1_000_000
         chunks = chunker.split(text)
-        matrix = np.asarray(embedder.embed(chunks), dtype=np.float32)
+        matrix = np.asarray(embed(chunks, "document"), dtype=np.float32)
         scores = evaluate(chunks, matrix, questions, queries)
         rows.append((size, len(chunks), scores))
         print(

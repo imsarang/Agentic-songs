@@ -1,0 +1,39 @@
+{
+  "uid": "shanks-retrieve",
+  "title": "Shanks retrieve",
+  "schemaVersion": 39,
+  "refresh": "5s",
+  "timezone": "browser",
+  "time": {"from": "now-15m", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Latency",
+      "description": "Milliseconds for one retrieve call.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.mrange", "filter": "group=retrieve name=latency_ms"}],
+      "fieldConfig": {"defaults": {"displayName": "${__field.labels.name}", "unit": "ms"}, "overrides": []}
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Empty",
+      "description": "1 means that call returned no chunks. 0 means it returned some.",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.mrange", "filter": "group=retrieve name=empty"}],
+      "fieldConfig": {"defaults": {"displayName": "${__field.labels.name}", "min": 0, "max": 1}, "overrides": []}
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Chunks returned",
+      "datasource": {"type": "redis-datasource", "uid": "shanks-redis"},
+      "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8},
+      "targets": [{"refId": "A", "datasource": {"type": "redis-datasource", "uid": "shanks-redis"}, "type": "timeSeries", "command": "ts.mrange", "filter": "group=retrieve name=chunks"}],
+      "fieldConfig": {"defaults": {"displayName": "${__field.labels.name}", "min": 0, "max": 5}, "overrides": []}
+    }
+  ]
+}
