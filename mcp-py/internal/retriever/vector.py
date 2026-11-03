@@ -26,4 +26,5 @@ def _chunk(point) -> dict:
         "url": payload.get("url"),
         "chunk_index": payload.get("chunk_index"),
         "body": payload.get("body") or "",
+        "sha256": payload.get("sha256") or ""
     }

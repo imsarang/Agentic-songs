@@ -39,7 +39,6 @@ async def run_turn(
     *,
     thread_id: str = "default",
     run_id: str | None = None,
-    domain: str | None = None,
     graph=None,
 ) -> AsyncIterator[dict[str, Any]]:
     graphs = get_graphs()
@@ -67,7 +66,7 @@ async def run_turn(
             tags=["shanks", "orchestrator"],
             metadata={"run_id": run_key},
         ) as plan_run:
-            domains = await plan(llm, user_text, hint, forced=domain or follow)
+            domains = await plan(llm, user_text, hint, forced=follow)
             # creative is commented out for now.
             # if letter_to_send(user_text):
             #     rest = [d for d in domains if d not in ("creative", "google")]

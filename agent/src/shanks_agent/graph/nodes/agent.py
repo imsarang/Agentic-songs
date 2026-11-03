@@ -12,6 +12,7 @@ from shanks_agent.graph.nodes.tools import DOMAIN_TOOLS
 from shanks_agent.graph.prompts import build_system_prompt
 from shanks_agent.graph.state import AgentState
 from shanks_agent.llm.failover import FailoverLLM
+from shanks_agent.middleware.gaurdrails import study as study_guard
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +35,18 @@ def make_agent_node(llm: FailoverLLM):
     async def agent_node(state: AgentState) -> dict[str, Any]:
         domain = state.get("domain") or "spotify"
         allowed = DOMAIN_TOOLS.get(domain, DOMAIN_TOOLS["spotify"])
-        n_msgs = len(state.get("messages") or [])
-        logger.info("node=agent enter domain=%s messages=%d", domain, n_msgs)
+        history = list(state.get("messages") or [])
+        logger.info("node=agent enter domain=%s messages=%d", domain, len(history))
+
+        if domain == "study":
+            held = study_guard.closed(history)
+            if held:
+                emit({"type": "assistant_message", "subagent": domain, "text": held})
+                return {"messages": [AIMessage(content=held)], "next_tool": None}
+
         messages = [
             SystemMessage(content=build_system_prompt(domain, allowed)),
-            *list(state.get("messages") or []),
+            *history,
         ]
         ai = await llm.acomplete(messages)
         # Anthropic may return [{thinking…}, {type:text, text:…}] — keep text only
@@ -61,6 +69,12 @@ def make_agent_node(llm: FailoverLLM):
                     "messages": [AIMessage(content=msg)],
                     "next_tool": None,
                 }
+
+            if domain == "study" and study_guard._results(history):
+                text = study_guard.UNGROUNDED
+                emit({"type": "assistant_message", "subagent": domain, "text": text})
+                return {"messages": [AIMessage(content=text)], "next_tool": None}
+
             args = decision.get("args") if isinstance(decision.get("args"), dict) else {}
             logger.info("node=agent route_tool=%s args=%s", name, args)
             return {
@@ -70,6 +84,9 @@ def make_agent_node(llm: FailoverLLM):
             }
 
         text = str(decision.get("text") or content)
+
+        if domain == "study":
+            text = study_guard.ground(text, history)
         logger.info("node=agent finish text=%s", text[:200])
         emit({"type": "assistant_message", "subagent": domain, "text": text})
         return {

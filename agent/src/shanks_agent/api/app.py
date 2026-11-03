@@ -51,7 +51,6 @@ async def turn(
                 body.text,
                 thread_id=body.thread_id,
                 run_id=body.run_id,
-                domain=body.domain,
             ):
                 yield _sse(event)
         except Exception as exc:  # noqa: BLE001
