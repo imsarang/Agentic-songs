@@ -11,5 +11,5 @@ export CELERY_BROKER_URL=redis://127.0.0.1:6391/1
 export QDRANT_URL=http://127.0.0.1:6333
 export EMBED_MODEL_PATH="${HOME}/.local/models/bge-large-en-v1.5"
 export EMBED_URL=http://127.0.0.1:8091/embed
-export PYTHONPATH=worker/src
+export PYTHONPATH=worker/interview/src
 exec worker/.venv/bin/python -m worker

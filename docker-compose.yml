@@ -37,7 +37,7 @@ services:
   #     MCP_ADDR: ":8080"
   #     SPOTIFY_IN_DOCKER: "1"
   #   volumes:
-  #     - ${SHANKS_SPOTIFY_DIR:-${HOME}/.config/shanks}:/data
+  #     - ${SHANKS_DIR:-${HOME}/.config/shanks}:/data
   #   ports:
   #     - "8080:8080"
   #     - "4381:4381"
@@ -58,7 +58,7 @@ services:
   #   extra_hosts:
   #     - "host.docker.internal:host-gateway"
   #   volumes:
-  #     - ${SHANKS_SPOTIFY_DIR:-${HOME}/.config/shanks}:/data
+  #     - ${SHANKS_DIR:-${HOME}/.config/shanks}:/data
   #   ports:
   #     - "8004:8080"
   #     - "4382:4382"

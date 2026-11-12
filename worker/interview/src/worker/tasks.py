@@ -11,7 +11,6 @@ log = get_task_logger(__name__)
 chunker = Chunker()
 store = VectorStore()
 
-
 @celery.task(name="documents.chunk.dead")
 def dead_document(message: dict, error: str) -> None:
     log.error("dead %s %s %s", message.get("source_id"), message.get("sha256"), error)
@@ -26,6 +25,7 @@ def store_document(self, message: dict) -> int:
         log.info("job %s %s", message["source_id"], message["key"])
         text = get_object(message["key"]).decode()
         parts = chunker.split(text)
+
         log.info("chunks %s chars %s", len(parts), len(text))
         stored = store.upsert(message, parts, embed(parts, "document"))
         log.info("stored %s chunks in study", stored)

@@ -6,7 +6,22 @@ import torch
 from sentence_transformers import SentenceTransformer
 
 QUERY = "Represent this sentence for searching relevant passages: "
-device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def _device() -> str:
+    choice = os.environ.get("EMBED_DEVICE", "").strip().lower()
+    if choice:
+        return choice
+    if not torch.cuda.is_available():
+        return "cpu"
+    free, _total = torch.cuda.mem_get_info()
+    # bge-large in float16 needs well over a gigabyte, and Qwen already fills this card.
+    if free < 1536 * 1024 * 1024:
+        return "cpu"
+    return "cuda"
+
+
+device = _device()
 kwargs = {"torch_dtype": torch.float16} if device == "cuda" else {}
 model = SentenceTransformer(os.environ["EMBED_MODEL_PATH"], device=device, model_kwargs=kwargs)
 

@@ -33,7 +33,7 @@ def retrieve(query: str, limit: int = 5, run_id: str = "") -> list[dict]:
     write(elapsed_ms, not picked, len(picked))
     return picked
 
-
+# replace wit bi-encoder, for now rrf with (1 /60+rank)
 def _rrf(rankings: list[list[dict]], k: int = 60) -> list[dict]:
     scores: dict[str, float] = {}
     chunks: dict[str, dict] = {}

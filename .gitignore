@@ -37,3 +37,5 @@ htmlcov/
 # editor and OS
 .DS_Store
 *.log
+
+evals/interview/*.json

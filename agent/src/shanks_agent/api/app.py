@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import HumanMessage
 
 from shanks_agent.api.schemas import MCPCallRequest, TurnRequest
+from shanks_agent.config import get_settings
 from shanks_agent.graph.build import get_graph, run_turn
 from shanks_agent.llm import build_failover_llm
 from shanks_agent.mcp.session import MCPSession, format_mcp_error
@@ -80,7 +81,8 @@ async def mcp_tools() -> dict:
 @app.post("/mcp/call")
 async def mcp_call(body: MCPCallRequest) -> dict:
     try:
-        preview = await MCPSession().call_tool(body.name, body.arguments)
+        url = get_settings().retrieve_mcp_url if body.name == "retrieve" else None
+        preview = await MCPSession(url).call_tool(body.name, body.arguments)
         return {"ok": True, "preview": preview}
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "error": format_mcp_error(exc)}

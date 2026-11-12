@@ -16,7 +16,9 @@ class _Page(HTMLParser):
     def handle_starttag(self, tag: str, attrs) -> None:
         if tag in _SKIP:
             self.skip += 1
-        if tag in _BLOCKS:
+        if tag in _HEADINGS:
+            self.parts.append("\n<<section>>\n")
+        elif tag in _BLOCKS:
             self.parts.append("\n")
     
     def handle_endtag(self, tag: str) -> None:

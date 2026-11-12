@@ -32,9 +32,9 @@ services:
     restart: unless-stopped
 
   crawl:
-    build: ./crawl
+    build: ./crawl/interview
     container_name: shanks-crawl
-    env_file: ./crawl/.env
+    env_file: ./crawl/interview/.env
     environment:
       PYTHONUNBUFFERED: "1"
       S3_ENDPOINT: http://minio:9000
@@ -44,7 +44,7 @@ services:
       - minio
       - redis
     volumes:
-      - ./crawl/config:/app/config:ro
+      - ./crawl/interview/config:/app/config:ro
     restart: "no"
 
 volumes:

@@ -1,0 +1,9 @@
+sources:
+  - id: hello-interview-rate-limitter
+    url: https://www.hellointerview.com/learn/system-design/problem-breakdowns/distributed-rate-limiter
+
+  - id: hello-interview-url-shortner
+    url: https://www.hellointerview.com/learn/system-design/problem-breakdowns/bitly
+  
+  - id: hello-interview-dropbox
+    url: https://www.hellointerview.com/learn/system-design/problem-breakdowns/dropbox
