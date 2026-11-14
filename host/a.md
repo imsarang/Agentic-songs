@@ -91,11 +91,10 @@ Host tools needed: `pw-record`, `wpctl` (PipeWire), and Redis reachable on the U
 
 ## How to run
 
-- **Stack + ear (recommended):** from repo root, `make stack-up` / `make stack-down`  
-  - starts Docker Compose, then `systemctl --user start` the host wire  
-  - does **not** enable the unit on boot — ear only runs while you `make stack-up`
+- **Shanks:** from repo root, `make shanks` / `make down` starts the MCP servers and the agent.
+- **Whole stack:** `make boot` / `make down`. Boot also starts the ear. Down stops it. The unit stays disabled, so login does not start it.
 - **One sample:** `./sample.sh`
-- **Continuous ear alone:** `./run.sh` or `systemctl --user start host-capturer.service` (unit lives in `~/.config/systemd/user/`)
+- **Ear alone:** `systemctl --user start host-capturer.service` (unit lives in `~/.config/systemd/user/`)
 
 ---
 
