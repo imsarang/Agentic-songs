@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/redis/go-redis/v9"
 	"shanks/internal/ecommerce/config"
 	"shanks/internal/ecommerce/providers"
 	"shanks/internal/ecommerce/tools"
@@ -30,9 +31,14 @@ func run() error {
 	client.RelevantDomains(boot, config.Electronics())
 	cancel()
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "localhost:6380",
+		DB:   1,
+	})
+
 	log.Printf("Ecommerce MCP up")
 	transport.Serve("ecommerce", "0.1.0", func(s *server.MCPServer) {
-		tools.Register(s, client)
+		tools.Register(s, client, redisClient)
 	})
 	return nil
 }

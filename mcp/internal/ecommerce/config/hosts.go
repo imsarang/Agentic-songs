@@ -1,5 +1,7 @@
 package config
 
+import "net/url"
+
 type Host struct {
 	Name  string
 	Group string
@@ -10,6 +12,7 @@ const (
 	AUDIOPHILE = "audiophile"
 	KEYBOARDS  = "keyboards"
 	DIY        = "diy"
+	AMAZON = "amazon.in"
 )
 
 func Electronics() []Host {
@@ -36,4 +39,8 @@ func Electronics() []Host {
 		{"makerbazar.in", DIY},
 		{"quartzcomponents.com", DIY},
 	}
+}
+
+func AmazonSearchUrl(query string) string {
+	return "https://www.amazzon.in/s?k=" + url.QueryEscape(query)
 }

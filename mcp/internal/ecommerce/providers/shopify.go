@@ -7,15 +7,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
 	"shanks/internal/ecommerce/config"
 	"shanks/internal/ecommerce/discover"
+	"shanks/internal/ecommerce/infra"
 )
 
 const (
@@ -71,7 +74,7 @@ func (c *HttpClient) RelevantDomains(ctx context.Context, hosts []config.Host) {
 	_ = g.Wait()
 }
 
-func (c *HttpClient) SearchProduct(ctx context.Context, group, query string) ([]Product, error) {
+func (c *HttpClient) SearchProduct(ctx context.Context, group, query string, rdb *redis.Client) ([]Product, error) {
 	if strings.TrimSpace(query) == "" {
 		return nil, errors.New("query is empty")
 	}
@@ -104,7 +107,17 @@ func (c *HttpClient) SearchProduct(ctx context.Context, group, query string) ([]
 		})
 	}
 
-	return found, g.Wait()
+	// enqueue job to redis
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	snapshot := append([]Product(nil), found...)
+	go enqueue(rdb, group, snapshot)
+	go enqueueAmazon(rdb, group, query)
+
+	return snapshot, nil
 }
 
 func (c *HttpClient) suggest(ctx context.Context, host, query string) ([]Product, error) {
@@ -187,4 +200,44 @@ func (c *HttpClient) NetworkCall(ctx context.Context, method, rawURL string, in,
 		last = errors.New("request failed")
 	}
 	return last
+}
+
+func enqueue(rdb *redis.Client, group string, rows []Product) {
+	if rdb == nil || len(rows) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	for _, row := range rows {
+		title, handle, link := row.Title, row.Handle, row.URL
+		job := infra.Job{
+			Type: "api", Origin: "shopify", Category: group, Host: row.Host,
+			Title: &title, Handle: &handle, URL: &link, Price: row.Price,
+		}
+		if _, err := infra.EnqueueCeleryTask(ctx, rdb, "ecommerce", "ecommerce.upsert", job); err != nil {
+			log.Printf("enqueue %s: %v", row.URL, err)
+		}
+	}
+}
+
+func enqueueAmazon(rdb *redis.Client, group, query string) {
+	if rdb == nil || strings.TrimSpace(query) == "" {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2 * time.Second)
+	defer cancel()
+
+	link := config.AmazonSearchUrl(query)
+	job := infra.Job{
+		Type: "search",
+		Origin: "amazon",
+		Category: group,
+		Host: config.AMAZON,
+		URL: &link,
+	}
+
+	if _, err := infra.EnqueueCeleryTask(ctx, rdb, "crawl", "ecommerce.crawl", job); err != nil {
+		log.Printf("enqueue amazon %s: %v", link, err)
+	}
 }
